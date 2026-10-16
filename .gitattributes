@@ -1,0 +1,2 @@
+# Runtime contract hashes cover the exact approved bytes.
+lib/legal-contracts/* -text

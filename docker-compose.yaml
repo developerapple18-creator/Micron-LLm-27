@@ -1,0 +1,20 @@
+# Default single-node Postgres for the standard test suite.
+# Usage: docker compose up -d
+# The alternative backends each have their own file (docker-compose.cockroach.yaml,
+# docker-compose.yugabyte.yaml, docker-compose.citus.yaml) so they never start alongside this default.
+services:
+  db:
+    image: postgres:18
+    ports:
+      - 5432:5432
+    volumes:
+      - db_volume:/var/lib/postgresql
+    environment:
+      - POSTGRES_DB=pgboss
+      - POSTGRES_NAME=pgboss
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    command: -c 'max_connections=400'
+
+volumes:
+  db_volume:

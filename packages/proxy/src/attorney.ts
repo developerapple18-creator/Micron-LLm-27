@@ -1,0 +1,975 @@
+import assert from 'node:assert'
+import { systemClock } from './clock.ts'
+import { DEFAULT_SCHEMA } from './plans.ts'
+import type * as types from './types.ts'
+
+const POLICY = {
+  MAX_EXPIRATION_HOURS: 24,
+  MIN_POLLING_INTERVAL_MS: 500,
+  MAX_RETENTION_DAYS: 365
+}
+
+// The internal compatibility flags a backend can toggle. A backend sets only the flags that differ
+// from stock PostgreSQL; everything else defaults to false. These are derived from the backend
+// profile and are not user-configurable (see resolveBackend).
+const COMPATIBILITY_FLAGS = [
+  'noSkipLocked',
+  'noMultiMutationCte',
+  'noTablePartitioning',
+  'noDeferrableConstraints',
+  'noAdvisoryLocks',
+  'noCoveringIndexes',
+  'noAddColumnBackfill',
+  'noListenNotify',
+  'noIndexProgressView',
+  'noReindex',
+  'noMonitorVacuum',
+  'noTransactionalHeartbeat',
+  'inlineTableIndexes'
+] as const
+
+type CompatibilityFlag = typeof COMPATIBILITY_FLAGS[number]
+
+// A backend's kind describes how it runs, independent of its compatibility flags:
+//  - 'standard'    stock single-node PostgreSQL
+//  - 'distributed' clustered Postgres-compatible engines (CockroachDB, YugabyteDB, Citus)
+//  - 'embedded'    in-process single-connection PostgreSQL (PGlite)
+// PGlite is deliberately 'embedded', NOT 'distributed'. It is full PostgreSQL and sets no flags.
+interface BackendDefinition {
+  kind: 'standard' | 'distributed' | 'embedded'
+  flags: Partial<Record<CompatibilityFlag, boolean>>
+}
+
+// The single source of truth for backend presets, mirrored by test/testHelper.ts.
+const BACKEND_PROFILES: Record<types.BackendProfile, BackendDefinition> = {
+  postgres: { kind: 'standard', flags: {} },
+  cockroachdb: {
+    kind: 'distributed',
+    flags: {
+      noSkipLocked: true,
+      noMultiMutationCte: true,
+      noTablePartitioning: true,
+      noDeferrableConstraints: true,
+      noAdvisoryLocks: true,
+      noCoveringIndexes: true,
+      // ADD COLUMN runs as a schema-change job, so a transaction cannot write the column it just
+      // added: the UPDATE fails with "column is being backfilled". A migration that seeds a new
+      // column leaves the seeding statement out here.
+      noAddColumnBackfill: true,
+      noListenNotify: true,
+      // Online DDL runs as a schema-change job, not the PG CONCURRENTLY path, and
+      // pg_stat_progress_create_index isn't available, so BAM can't use liveness-based reclaim.
+      noIndexProgressView: true,
+      // REINDEX is rejected in either form, "CockroachDB does not require reindexing" with
+      // CONCURRENTLY, "unimplemented: this syntax" without, and the bloat check itself cannot run:
+      // there is no pg_relation_size(), and reltuples / relpages is an "unsupported binary
+      // operator: <float4> / <int4>".
+      noReindex: true,
+      noMonitorVacuum: true,
+      // The heartbeat writes heartbeat_on on the claimed row from a pooled connection, which under
+      // serializable lands at a timestamp above the handler transaction's. The completion pg-boss
+      // runs inside that transaction then cannot write the same row and the batch dies with a
+      // WriteTooOldError. YugabyteDB's snapshot isolation waits instead, so it does NOT set this.
+      noTransactionalHeartbeat: true,
+      // Each CREATE INDEX or ADD PRIMARY KEY after a CREATE TABLE is its own schema-change job,
+      // run after commit even inside the create transaction: ~0.4-2s apiece, ~15s for a fresh
+      // schema. Declared inside CREATE TABLE they cost nothing extra.
+      inlineTableIndexes: true
+    }
+  },
+  yugabytedb: {
+    kind: 'distributed',
+    flags: {
+      noAdvisoryLocks: true,
+      noTablePartitioning: true,
+      // Index builds are a distributed backfill that pg_stat_progress_create_index doesn't reflect,
+      // so liveness would misread an in-flight build as dead. BAM falls back to the timeout instead.
+      noIndexProgressView: true,
+      // "REINDEX not supported yet" with or without CONCURRENTLY, and DocDB compaction owns
+      // reclamation. The bloat check runs but can never match: relpages and pg_relation_size() are
+      // 0 for every relation.
+      noReindex: true,
+      noMonitorVacuum: true
+    }
+  },
+  // No noIndexProgressView: pg-boss keeps its tables coordinator-local (it never calls
+  // create_distributed_table), so CREATE INDEX CONCURRENTLY runs against ordinary local Postgres tables
+  // on the coordinator, where pg_stat_progress_create_index is accurate and liveness-based reclaim is
+  // valid. This holds ONLY while the tables stay coordinator-local. If they are ever distributed, the
+  // coordinator's progress view would misread in-flight worker builds as dead and BAM could double-build.
+  citus: { kind: 'distributed', flags: {} },
+  pglite: { kind: 'embedded', flags: {} }
+}
+
+function assertObjectName (value: string, name: string = 'Name') {
+  assert(/^[\w.\-/]+$/.test(value), `${name} can only contain alphanumeric characters, underscores, hyphens, periods, or forward slashes`)
+}
+
+function validateQueueArgs (config: any = {}) {
+  assert(!('deadLetter' in config) || config.deadLetter === null || (typeof config.deadLetter === 'string'), 'deadLetter must be a string')
+
+  assert(!('notify' in config) || typeof config.notify === 'boolean', 'notify must be a boolean')
+
+  if (config.deadLetter) {
+    assertObjectName(config.deadLetter, 'deadLetter')
+  }
+
+  validateRetryConfig(config)
+  validateExpirationConfig(config)
+  validateRetentionConfig(config)
+  validateDeletionConfig(config)
+  validateHeartbeatConfig(config)
+}
+
+// A `startAfter` string that begins with an ISO 8601 calendar date is cast to timestamptz by the
+// database, so one carrying no zone designator resolves in the database session's TimeZone. Two
+// instances against the same database can then schedule the same string at different instants
+// (a 10.5 hour spread between America/New_York and Asia/Kolkata, and a date-only string can land
+// on the previous day), which is nothing the caller of send() is thinking about. The documented
+// contract is UTC and the Date path already produces UTC via toISOString(), so pin the zone here.
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}/
+
+// Matched against the remainder past YYYY-MM-DD, and deliberately a whitelist of the zone-less
+// spellings rather than a test for a missing zone: a trailing '-01' would read as an offset, and
+// forms Postgres resolves on its own must be left exactly as they are rather than pinned to UTC.
+// Those forms are a named zone ('... UTC', '... America/New_York') and a single-digit offset
+// ('+5:30').
+const ZONELESS_TIME = /^(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:[.,]\d+)?)?)?)?$/
+
+function pinZonelessDateTime (value: string) {
+  return ISO_DATE.test(value) && ZONELESS_TIME.test(value.slice(10)) ? value + 'Z' : value
+}
+
+function checkSendArgs (args: any): types.Request {
+  let name, data, options
+
+  if (typeof args[0] === 'string') {
+    name = args[0]
+    data = args[1]
+
+    assert(typeof data !== 'function', 'send() cannot accept a function as the payload.  Did you intend to use work()?')
+
+    options = args[2]
+  } else if (typeof args[0] === 'object') {
+    assert(args.length === 1, 'send object API only accepts 1 argument')
+
+    const job = args[0]
+
+    assert(job, 'boss requires all jobs to have a name')
+
+    name = job.name
+    data = job.data
+    options = job.options
+  }
+
+  options = options || {}
+
+  assert(name, 'boss requires all jobs to have a queue name')
+  assert(typeof options === 'object', 'options should be an object')
+
+  options = { ...options }
+
+  assert(!('priority' in options) || (Number.isInteger(options.priority)), 'priority must be an integer')
+  options.priority = options.priority || 0
+
+  options.startAfter = (options.startAfter instanceof Date && typeof options.startAfter.toISOString === 'function')
+    ? options.startAfter.toISOString()
+    : (+options.startAfter > 0)
+        ? '' + options.startAfter
+        : (typeof options.startAfter === 'string')
+            ? pinZonelessDateTime(options.startAfter)
+            : undefined
+
+  validateRetryConfig(options)
+  validateExpirationConfig(options)
+  validateRetentionConfig(options)
+  validateDeletionConfig(options)
+  validateGroupConfig(options)
+  validateHeartbeatConfig(options)
+
+  return { name, data, options }
+}
+
+const JOB_MATCH_STRATEGIES = ['newest', 'oldest', 'all']
+
+// Unlike checkSendArgs, this does NOT inject send-style defaults (e.g. priority = 0): update()
+// is a partial edit, so only the option keys the caller actually supplied may survive into the
+// payload. Normalization is limited to type coercion (startAfter) and validation.
+function checkUpdateArgs (args: any, { upsert = false } = {}): types.Request {
+  const verb = upsert ? 'upsert()' : 'update()'
+  let name, data, rawOptions
+
+  if (typeof args[0] === 'string') {
+    name = args[0]
+    data = args[1]
+    rawOptions = args[2]
+  } else if (typeof args[0] === 'object') {
+    assert(args.length === 1, `${verb} object API only accepts 1 argument`)
+
+    const job = args[0]
+
+    assert(job, 'boss requires all jobs to have a name')
+
+    name = job.name
+    data = job.data
+    rawOptions = job.options
+  }
+
+  assert(name, 'boss requires all jobs to have a queue name')
+  assert(typeof data !== 'function', `${verb} cannot accept a function as the payload.  Did you intend to use work()?`)
+
+  const options = { ...(rawOptions || {}) }
+  assert(typeof options === 'object', 'options should be an object')
+
+  const { id, singletonKey, match } = options as types.UpdateOptions
+
+  // Both update() and upsert() target by exactly one of id or singletonKey. (upsert() may also
+  // require a singletonKey at runtime on key_strict_fifo queues, enforced in the manager, which
+  // knows the policy, because an insert-on-miss there needs a key.)
+  assert((!!id) !== (!!singletonKey), `${verb} requires exactly one of id or singletonKey`)
+  assert(!(id && match !== undefined), 'match is only valid when targeting jobs by singletonKey')
+
+  assert(match === undefined || JOB_MATCH_STRATEGIES.includes(match), `match must be one of: ${JOB_MATCH_STRATEGIES.join(', ')}`)
+
+  assert(!('priority' in options) || (Number.isInteger(options.priority)), 'priority must be an integer')
+
+  if ('startAfter' in options) {
+    // Unlike send(), update() must honor a numeric startAfter of 0 (or negative). The caller is
+    // explicitly pulling a deferred job forward to now. The send-style `+startAfter > 0` guard
+    // coerced 0 to undefined, which JSON.stringify then dropped, silently making the edit a no-op.
+    // Any finite number is passed through as a seconds interval ('0' -> now()); a string is kept.
+    const startAfter = options.startAfter
+    options.startAfter = (startAfter instanceof Date && typeof startAfter.toISOString === 'function')
+      ? startAfter.toISOString()
+      : (typeof startAfter === 'number' && Number.isFinite(startAfter))
+          ? '' + startAfter
+          : (typeof startAfter === 'string')
+              ? pinZonelessDateTime(startAfter)
+              : undefined
+  }
+
+  validateRetryConfig(options)
+  validateExpirationConfig(options)
+  validateRetentionConfig(options)
+  validateGroupConfig(options)
+  validateHeartbeatConfig(options)
+
+  return { name, data, options }
+}
+
+function validateGroupConfig (config: any) {
+  if (!('group' in config) || config.group === undefined || config.group === null) {
+    return
+  }
+  assert(typeof config.group === 'object', 'group must be an object')
+  assert(typeof config.group.id === 'string' && config.group.id.length > 0, 'group.id must be a non-empty string')
+  assert(!('tier' in config.group) || (typeof config.group.tier === 'string' && config.group.tier.length > 0), 'group.tier must be a non-empty string if provided')
+}
+
+function validateFlowJobs (jobs: types.FlowJob[]) {
+  assert(Array.isArray(jobs), 'flow requires an array of jobs')
+  assert(jobs.length >= 2, 'flow requires at least 2 jobs')
+
+  const refs = new Set<string>()
+  for (const job of jobs) {
+    assert(typeof job.ref === 'string' && job.ref.length > 0, 'each flow job must have a non-empty ref')
+    assert(!refs.has(job.ref), `duplicate ref: "${job.ref}"`)
+    refs.add(job.ref)
+
+    assert(typeof job.name === 'string' && job.name.length > 0, 'each flow job must have a non-empty name')
+    assertObjectName(job.name)
+  }
+
+  const hasDeps = jobs.some(j => j.dependsOn && j.dependsOn.length > 0)
+  assert(hasDeps, 'flow requires at least one job with dependsOn')
+
+  for (const job of jobs) {
+    if (!job.dependsOn) continue
+    assert(Array.isArray(job.dependsOn), `dependsOn for ref "${job.ref}" must be an array`)
+    for (const dep of job.dependsOn) {
+      assert(typeof dep === 'string' && dep.length > 0, 'dependsOn entries must be non-empty strings')
+      assert(dep !== job.ref, `job "${job.ref}" cannot depend on itself`)
+      assert(refs.has(dep), `dependsOn ref "${dep}" not found in flow`)
+    }
+  }
+
+  // Cycle detection via topological sort
+  const inDegree = new Map<string, number>()
+  const edges = new Map<string, string[]>()
+  for (const job of jobs) {
+    inDegree.set(job.ref, 0)
+    edges.set(job.ref, [])
+  }
+  for (const job of jobs) {
+    if (!job.dependsOn) continue
+    for (const dep of job.dependsOn) {
+      edges.get(dep)!.push(job.ref)
+      inDegree.set(job.ref, inDegree.get(job.ref)! + 1)
+    }
+  }
+  const queue: string[] = []
+  for (const [ref, deg] of inDegree) {
+    if (deg === 0) queue.push(ref)
+  }
+  let visited = 0
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    visited++
+    for (const child of edges.get(current)!) {
+      const newDeg = inDegree.get(child)! - 1
+      inDegree.set(child, newDeg)
+      if (newDeg === 0) queue.push(child)
+    }
+  }
+  if (visited !== jobs.length) {
+    const cycle = findDependencyCycle(edges)
+    assert(false, `flow contains a dependency cycle: ${cycle.join(' -> ')}`)
+  }
+}
+
+function findDependencyCycle (edges: Map<string, string[]>): string[] {
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const path: string[] = []
+
+  function visit (ref: string): string[] | null {
+    if (visiting.has(ref)) {
+      const start = path.indexOf(ref)
+      return [...path.slice(start), ref]
+    }
+
+    if (visited.has(ref)) return null
+
+    visiting.add(ref)
+    path.push(ref)
+
+    for (const child of edges.get(ref) || []) {
+      const cycle = visit(child)
+      if (cycle) return cycle
+    }
+
+    path.pop()
+    visiting.delete(ref)
+    visited.add(ref)
+
+    return null
+  }
+
+  let cycle: string[] | null = null
+  for (const ref of edges.keys()) {
+    cycle = visit(ref)
+    if (cycle) break
+  }
+
+  return cycle!
+}
+
+function validateGroupConcurrencyValue (value: any, optionName: string) {
+  if (typeof value === 'number') {
+    assert(Number.isInteger(value) && value >= 1, `${optionName} must be an integer >= 1`)
+    return
+  }
+  assert(typeof value === 'object', `${optionName} must be a number or an object with { default, tiers? }`)
+  assert(Number.isInteger(value.default) && value.default >= 1, `${optionName}.default must be an integer >= 1`)
+  if ('tiers' in value && value.tiers) {
+    assert(typeof value.tiers === 'object', `${optionName}.tiers must be an object`)
+    for (const [tier, limit] of Object.entries(value.tiers)) {
+      assert(typeof tier === 'string' && tier.length > 0, `${optionName} tier keys must be non-empty strings`)
+      assert(Number.isInteger(limit) && (limit as number) >= 1, `${optionName}.tiers["${tier}"] must be an integer >= 1`)
+    }
+  }
+}
+
+function validatePriorityRangeConfig (config: any) {
+  if (config.minPriority !== undefined) {
+    assert(Number.isInteger(config.minPriority), 'minPriority must be an integer')
+  }
+  if (config.maxPriority !== undefined) {
+    assert(Number.isInteger(config.maxPriority), 'maxPriority must be an integer')
+  }
+  if (config.minPriority !== undefined && config.maxPriority !== undefined) {
+    assert(config.minPriority <= config.maxPriority, 'minPriority must be <= maxPriority')
+  }
+}
+
+function validateGroupConcurrencyConfig (config: any) {
+  const hasGlobal = config.groupConcurrency != null
+  const hasLocal = config.localGroupConcurrency != null
+
+  assert(
+    !(hasGlobal && hasLocal),
+    'cannot specify both groupConcurrency and localGroupConcurrency - choose one'
+  )
+
+  if (hasGlobal) validateGroupConcurrencyValue(config.groupConcurrency, 'groupConcurrency')
+  if (hasLocal) {
+    validateGroupConcurrencyValue(config.localGroupConcurrency, 'localGroupConcurrency')
+    validateLocalGroupConcurrencyLimit(config.localGroupConcurrency, config.localConcurrency)
+  }
+}
+
+function validateLocalGroupConcurrencyLimit (localGroupConcurrency: any, localConcurrency: number | undefined) {
+  const effectiveLocalConcurrency = localConcurrency ?? 1
+
+  if (typeof localGroupConcurrency === 'number') {
+    assert(
+      localGroupConcurrency <= effectiveLocalConcurrency,
+      `localGroupConcurrency (${localGroupConcurrency}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`
+    )
+  } else if (typeof localGroupConcurrency === 'object') {
+    assert(
+      localGroupConcurrency.default <= effectiveLocalConcurrency,
+      `localGroupConcurrency.default (${localGroupConcurrency.default}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`
+    )
+    if (localGroupConcurrency.tiers) {
+      for (const [tier, limit] of Object.entries(localGroupConcurrency.tiers)) {
+        assert(
+          (limit as number) <= effectiveLocalConcurrency,
+          `localGroupConcurrency.tiers["${tier}"] (${limit}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`
+        )
+      }
+    }
+  }
+}
+
+function checkWorkArgs (name: string, args: any[]): {
+  options: types.ResolvedWorkOptions
+  callback: types.WorkHandler<any>
+} {
+  let options, callback
+
+  assert(name, 'queue name is required')
+
+  if (args.length === 1) {
+    callback = args[0]
+    options = {}
+  } else if (args.length > 1) {
+    options = args[0] || {}
+    callback = args[1]
+  }
+
+  assert(typeof callback === 'function', 'expected callback to be a function')
+  assert(typeof options === 'object', 'expected config to be an object')
+
+  options = { ...options }
+
+  applyPollingInterval(options)
+
+  assert(!('batchSize' in options) || (Number.isInteger(options.batchSize) && options.batchSize >= 1), 'batchSize must be an integer > 0')
+  assert(!('includeMetadata' in options) || typeof options.includeMetadata === 'boolean', 'includeMetadata must be a boolean')
+  assert(!('priority' in options) || typeof options.priority === 'boolean', 'priority must be a boolean')
+  assert(!('localConcurrency' in options) || (Number.isInteger(options.localConcurrency) && options.localConcurrency >= 1), 'localConcurrency must be an integer >= 1')
+  assert(!('perJobResults' in options) || typeof options.perJobResults === 'boolean', 'perJobResults must be a boolean')
+  assert(!('transactional' in options) || typeof options.transactional === 'boolean', 'transactional must be a boolean')
+  validatePriorityRangeConfig(options)
+  validateGroupConcurrencyConfig(options)
+  validateHeartbeatRefreshConfig(options)
+  validateTransactionalConfig(options)
+
+  return { options, callback }
+}
+
+// Rejects the one combination a transactional worker cannot honour, rather than quietly degrading
+// one of the two features. Everything else about a worker (fetching, batching, concurrency, group
+// limits, heartbeats) is untouched by the option, because the transaction covers only the handler
+// and the completion.
+function validateTransactionalConfig (options: any) {
+  assert(!('transactionTimeoutSeconds' in options) || (Number.isInteger(options.transactionTimeoutSeconds) && options.transactionTimeoutSeconds >= 0),
+    'transactionTimeoutSeconds must be an integer >= 0')
+
+  if (!options.transactional) {
+    // Rejected rather than ignored: the bound only exists for a transaction pg-boss opened.
+    assert(!('transactionTimeoutSeconds' in options), 'transactionTimeoutSeconds requires transactional')
+    return
+  }
+
+  // Per-job settlement partitions a batch into separate outcomes; one transaction can only commit
+  // or roll back as a whole, so the two contradict each other.
+  assert(!options.perJobResults, 'transactional cannot be combined with perJobResults')
+}
+
+function checkFetchArgs (name: string, options: any) {
+  assert(name, 'missing queue name')
+
+  assert(!('batchSize' in options) || (Number.isInteger(options.batchSize) && options.batchSize >= 1), 'batchSize must be an integer > 0')
+  assert(!('includeMetadata' in options) || typeof options.includeMetadata === 'boolean', 'includeMetadata must be a boolean')
+  assert(!('priority' in options) || typeof options.priority === 'boolean', 'priority must be a boolean')
+  assert(!('ignoreStartAfter' in options) || typeof options.ignoreStartAfter === 'boolean', 'ignoreStartAfter must be a boolean')
+  validatePriorityRangeConfig(options)
+}
+
+function getConfig (value: string | types.ConstructorOptions): types.ResolvedConstructorOptions {
+  assert(value && (typeof value === 'object' || typeof value === 'string'),
+    'configuration assert: string or config object is required to connect to postgres')
+
+  const config = (typeof value === 'string')
+    ? { connectionString: value }
+    : { ...value }
+
+  config.schedule = ('schedule' in config) ? config.schedule : true
+  config.supervise = ('supervise' in config) ? config.supervise : true
+  config.migrate = ('migrate' in config) ? config.migrate : true
+  config.createSchema = ('createSchema' in config) ? config.createSchema : true
+  config.useListenNotify = ('useListenNotify' in config) ? config.useListenNotify : false
+  config.reindex = ('reindex' in config) ? config.reindex : true
+
+  resolveBackend(config)
+
+  applyClockConfig(config)
+  applySchemaConfig(config)
+  applyOpsConfig(config)
+  applyScheduleConfig(config)
+  applyBamConfig(config)
+  applyFlowConfig(config)
+  applyInstanceConfig(config)
+  validateWarningConfig(config)
+  validateOpenTelemetryConfig(config)
+
+  return config as types.ResolvedConstructorOptions
+}
+
+const CLOCK_METHODS = ['now', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] as const
+
+function applyClockConfig (config: types.ConstructorOptions) {
+  if (config.clock) {
+    const clock = config.clock as unknown as Record<string, unknown>
+    for (const method of CLOCK_METHODS) {
+      assert(typeof clock[method] === 'function', `configuration assert: clock must implement ${method}()`)
+    }
+  }
+
+  config.clock = config.clock || systemClock
+}
+
+function applySchemaConfig (config: types.ConstructorOptions) {
+  if (config.schema) {
+    assertPostgresObjectName(config.schema)
+  }
+
+  config.schema = config.schema || DEFAULT_SCHEMA
+}
+
+function applyInstanceConfig (config: any) {
+  config.registerInstance = ('registerInstance' in config) ? config.registerInstance !== false : true
+
+  assert(!('instanceName' in config) || config.instanceName === undefined || (typeof config.instanceName === 'string' && config.instanceName.length > 0),
+    'configuration assert: instanceName must be a non-empty string')
+
+  assert(!('instanceHeartbeatSeconds' in config) || config.instanceHeartbeatSeconds === undefined ||
+    (Number.isInteger(config.instanceHeartbeatSeconds) && config.instanceHeartbeatSeconds >= 1 && config.instanceHeartbeatSeconds <= 3600),
+  'configuration assert: instanceHeartbeatSeconds must be an integer from 1 to 3600')
+
+  config.instanceHeartbeatSeconds = config.instanceHeartbeatSeconds || 30
+}
+
+function validateOpenTelemetryConfig (config: any) {
+  const otel = config.openTelemetry
+
+  if (otel == null) return
+
+  assert(typeof otel === 'object', 'configuration assert: openTelemetry must be an object')
+
+  for (const key of ['enabled', 'propagateContext']) {
+    assert(otel[key] === undefined || typeof otel[key] === 'boolean', `configuration assert: openTelemetry.${key} must be a boolean`)
+  }
+
+  assert(otel.tracerProvider === undefined || typeof otel.tracerProvider?.getTracer === 'function',
+    'configuration assert: openTelemetry.tracerProvider must implement getTracer()')
+
+  assert(otel.meterProvider === undefined || typeof otel.meterProvider?.getMeter === 'function',
+    'configuration assert: openTelemetry.meterProvider must implement getMeter()')
+
+  assert(otel.propagator === undefined || (typeof otel.propagator?.inject === 'function' && typeof otel.propagator?.extract === 'function'),
+    'configuration assert: openTelemetry.propagator must implement inject() and extract()')
+}
+
+function validateWarningConfig (config: any) {
+  assert(!('warningQueueSize' in config) || config.warningQueueSize >= 1,
+    'configuration assert: warningQueueSize must be at least 1')
+
+  assert(!('warningSlowQuerySeconds' in config) || config.warningSlowQuerySeconds >= 1,
+    'configuration assert: warningSlowQuerySeconds must be at least 1')
+
+  assert(!('warningRetentionDays' in config) || (Number.isInteger(config.warningRetentionDays) && config.warningRetentionDays >= 1),
+    'configuration assert: warningRetentionDays must be an integer >= 1')
+
+  assert(!('warningRetentionDays' in config) || config.warningRetentionDays <= POLICY.MAX_RETENTION_DAYS,
+    `configuration assert: warningRetentionDays cannot exceed ${POLICY.MAX_RETENTION_DAYS} days`)
+
+  config.warningRetentionDays = config.warningRetentionDays || POLICY.MAX_RETENTION_DAYS
+}
+
+// Expands config.backend into the internal compatibility flags. The flags are derived
+// solely from the backend profile. They are not part of the public input, so a
+// deployment can't end up with an inconsistent combination.
+function resolveBackend (config: any) {
+  const backend = ('backend' in config) ? config.backend : 'postgres'
+
+  assert(backend in BACKEND_PROFILES,
+    `configuration assert: backend must be one of ${Object.keys(BACKEND_PROFILES).join(', ')}`)
+
+  config.backend = backend
+  const { flags } = BACKEND_PROFILES[backend as types.BackendProfile]
+
+  // A DeprecationWarning, like the deprecated fetch options in manager.ts: dropping the profile is a
+  // configuration change a developer makes, not a condition an operator watches.
+  if (backend === 'yugabytedb') {
+    process.emitWarning(
+      "backend: 'yugabytedb' is deprecated and will be rejected in the next major. YugabyteDB is not supported: releases are not tested against it and upgrades do not work there. See https://pgboss.io/database-backends#not-supported-yugabytedb",
+      'DeprecationWarning',
+      'PGBOSS_DEP_YUGABYTEDB'
+    )
+  }
+
+  for (const flag of COMPATIBILITY_FLAGS) {
+    config[flag] = flags[flag] ?? false
+  }
+
+  // Test hook: exercise the distributed runtime paths (atomic fetch + split mutations)
+  // on top of the current backend's schema, without standing up a distributed database.
+  if (config.__test__distributed) {
+    config.noSkipLocked = true
+    config.noMultiMutationCte = true
+  }
+
+  // Test hook: exercise the advisory-lock-free SQL path (used by YugabyteDB/CockroachDB) on a
+  // plain Postgres instance, without standing up a backend whose profile sets the flag.
+  if (config.__test__noAdvisoryLocks) {
+    config.noAdvisoryLocks = true
+  }
+
+  // Test hook: exercise the no-liveness BAM reclaim path (timeout-only, no CONCURRENTLY healing)
+  // used by CockroachDB/YugabyteDB, on a plain Postgres instance.
+  if (config.__test__noIndexProgressView) {
+    config.noIndexProgressView = true
+  }
+
+  // Test hook: exercise the transactional-heartbeat rejection (CockroachDB) on plain Postgres.
+  if (config.__test__noTransactionalHeartbeat) {
+    config.noTransactionalHeartbeat = true
+  }
+
+  // Test hook: exercise the detection-only reindex path (bloat is reported, never rebuilt) used by
+  // CockroachDB/YugabyteDB, on a plain Postgres instance.
+  if (config.__test__noReindex) {
+    config.noReindex = true
+  }
+}
+
+// The character rules for the contents of a quoted name, as a predicate clause returned rather than
+// thrown, so the bare-name path can ask whether quoting would actually fix a name before
+// recommending it - and explain why not when it wouldn't.
+function quotedNameProblem (resolved: string): string | null {
+  // the value is interpolated into identifier positions verbatim, so a double quote inside the
+  // outer pair would close the identifier early and allow arbitrary SQL to follow.
+  if (resolved.includes('"')) return 'cannot contain double quotes'
+  // a single quote would terminate the literal in the string-comparison positions, and would also
+  // break the `EXECUTE format('… ')` bodies the schema is interpolated into.
+  if (resolved.includes("'")) return 'cannot contain single quotes'
+  // % is a format() specifier, and the schema is interpolated into EXECUTE format('… ${schema}.%I …')
+  // templates. an unknown specifier aborts the statement; a valid one (e.g. "a%Ib") is worse, since
+  // it silently consumes an argument and shifts every later specifier by one.
+  if (resolved.includes('%')) return 'cannot contain percent signs'
+  // $ can collide with the dollar-quoted function bodies the schema appears inside.
+  if (resolved.includes('$')) return 'cannot contain dollar signs'
+  // partition and table naming splits on '.', so a dot would be misread as a schema separator.
+  if (resolved.includes('.')) return 'cannot contain periods'
+  // backslash is not valid in the bytea inputs the name is hashed through, and control
+  // characters can break out of the provenance comments in exported migration SQL.
+  if (resolved.includes('\\')) return 'cannot contain backslashes'
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(resolved)) return 'cannot contain control characters'
+  return null
+}
+
+function assertPostgresObjectName (name: string) {
+  assert(typeof name === 'string', 'Name must be a string')
+
+  const quoted = name.startsWith('"') && name.endsWith('"') && name.length > 1
+  const resolved = quoted ? name.slice(1, -1) : name
+
+  assert(resolved.length > 0, 'Name cannot be empty')
+  // the limit applies to the resolved name, since that is what postgres stores and what the
+  // derived object names are built from. it is measured in bytes rather than characters because
+  // postgres truncates identifiers at NAMEDATALEN-1 (63) bytes *silently* - a name over the limit
+  // would install fine but leave the configured name and the catalog name permanently out of sync,
+  // so every nspname comparison would miss. bare names are ascii, so this only binds on quoted ones.
+  assert(Buffer.byteLength(resolved, 'utf8') <= 50, 'Name cannot exceed 50 bytes')
+
+  if (quoted) {
+    const problem = quotedNameProblem(resolved)
+    assert(problem === null, `Quoted name ${problem}`)
+    return
+  }
+
+  // A name that is not a legal bare identifier is usable verbatim if it is quoted, so hand the
+  // caller the config value that works instead of only the rule they broke - otherwise the feature
+  // is only discoverable by finding the docs. When quoting would not help either, say which rule
+  // stops it, rather than recommending a value that also throws or leaving the caller to guess.
+  const problem = quotedNameProblem(name)
+  const remedy = problem === null
+    ? ` Pass it quoted to use it verbatim: schema: '"${name}"'`
+    : ` Quoting will not help: a quoted name ${problem}.`
+
+  // Both rules are scoped to unquoted names - the message has to say so, since the quoted form
+  // accepts far more than this.
+  assert(!/\W/.test(name), `Schema name ${JSON.stringify(name)} can only contain alphanumeric characters or underscores when unquoted.${remedy}`)
+  assert(!/^\d/.test(name), `Schema name ${JSON.stringify(name)} cannot start with a number when unquoted.${remedy}`)
+}
+
+const LIST_LIMIT_DEFAULT = 1000
+const LIST_LIMIT_MAX = 100_000
+
+// The limit of a public list read: an integer from 1 to LIST_LIMIT_MAX, LIST_LIMIT_DEFAULT when
+// left out. Internal callers that need every row call below the public method instead.
+function assertListLimit (method: string, limit: number = LIST_LIMIT_DEFAULT): number {
+  assert(Number.isInteger(limit) && limit >= 1 && limit <= LIST_LIMIT_MAX,
+    `${method}: limit must be an integer between 1 and ${LIST_LIMIT_MAX}`)
+  return limit
+}
+
+// Any spelling the uuid type accepts, in either case: 32 hex digits, a hyphen allowed after any group
+// of four but the last, and the whole optionally inside one pair of braces. A read that pages by id
+// checks it here, so a malformed one is a usage error rather than the database's.
+const UUID_INPUT = /^(?:\{[0-9a-fA-F]{4}(?:-?[0-9a-fA-F]{4}){7}\}|[0-9a-fA-F]{4}(?:-?[0-9a-fA-F]{4}){7})$/
+
+function isUuid (value: string): boolean {
+  return UUID_INPUT.test(value)
+}
+
+// The `after` of a list read that pages by one value: a queue name, a key or, with `id`, an id.
+function assertListAfter (method: string, after: unknown, id = false): void {
+  assert(after === undefined || (typeof after === 'string' && after.length > 0),
+    `${method}: after must be a non-empty string`)
+  assert(!id || after === undefined || isUuid(after as string), `${method}: after must be a uuid`)
+}
+
+// The `after` of a list read that pages by a row: the previous page's last row, of which only the
+// two named fields are read. With `id`, that field must be a uuid.
+function assertListAfterRow (method: string, after: unknown, fields: [string, string], id?: string): void {
+  assert(after === undefined || (typeof after === 'object' && after !== null &&
+    fields.every(field => typeof (after as Record<string, unknown>)[field] === 'string')),
+  `${method}: after must be an object with string ${fields.join(' and ')}`)
+  assert(!id || after === undefined || isUuid((after as Record<string, string>)[id]), `${method}: after.${id} must be a uuid`)
+}
+
+function assertQueueName (name: string) {
+  assert(name, 'Name is required')
+  assert(typeof name === 'string', 'Name must be a string')
+  assertObjectName(name)
+}
+
+function assertKey (key: string) {
+  if (!key) return
+  assert(typeof key === 'string', 'Key must be a string')
+  assertObjectName(key, 'Key')
+}
+
+function validateRetentionConfig (config: any) {
+  assert(!('retentionSeconds' in config) || config.retentionSeconds >= 1,
+    'configuration assert: retentionSeconds must be at least every second')
+}
+
+function validateExpirationConfig (config: any) {
+  assert(!('expireInSeconds' in config) || config.expireInSeconds >= 1,
+    'configuration assert: expireInSeconds must be at least every second')
+
+  // inclusive, like every other option bounded by MAX_EXPIRATION_HOURS: an expiration of exactly
+  // the maximum does not "exceed" it. this is also the value the docs recommend for the longest
+  // jobs, and the value the maintenance interval defaults to.
+  assert(!config.expireInSeconds || config.expireInSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: expiration cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+}
+
+function validateRetryConfig (config: any) {
+  assert(!('retryDelay' in config) || (Number.isInteger(config.retryDelay) && config.retryDelay >= 0), 'retryDelay must be an integer >= 0')
+  assert(!('retryLimit' in config) || (Number.isInteger(config.retryLimit) && config.retryLimit >= 0), 'retryLimit must be an integer >= 0')
+  assert(!('retryBackoff' in config) || (config.retryBackoff === true || config.retryBackoff === false), 'retryBackoff must be either true or false')
+  assert(!('retryDelayMax' in config) || config.retryDelayMax === null || config.retryBackoff === true, 'retryDelayMax can only be set if retryBackoff is true')
+  assert(!('retryDelayMax' in config) || config.retryDelayMax === null || (Number.isInteger(config.retryDelayMax) && config.retryDelayMax >= 0), 'retryDelayMax must be an integer >= 0')
+}
+
+function validateHeartbeatConfig (config: any) {
+  assert(!('heartbeatSeconds' in config) || config.heartbeatSeconds === null || (Number.isInteger(config.heartbeatSeconds) && config.heartbeatSeconds >= 10),
+    'heartbeatSeconds must be an integer >= 10')
+}
+
+function validateHeartbeatRefreshConfig (config: any) {
+  if (!('heartbeatRefreshSeconds' in config) || config.heartbeatRefreshSeconds == null) return
+
+  assert(typeof config.heartbeatRefreshSeconds === 'number' && config.heartbeatRefreshSeconds > 0,
+    'heartbeatRefreshSeconds must be a number > 0')
+}
+
+function applyPollingInterval (config: any) {
+  assert(!('pollingIntervalSeconds' in config) || config.pollingIntervalSeconds >= POLICY.MIN_POLLING_INTERVAL_MS / 1000,
+    `configuration assert: pollingIntervalSeconds must be at least every ${POLICY.MIN_POLLING_INTERVAL_MS}ms`)
+
+  config.pollingInterval = ('pollingIntervalSeconds' in config)
+    ? config.pollingIntervalSeconds * 1000
+    : 2000
+
+  assert(!('notifyPollingIntervalSeconds' in config) || config.notifyPollingIntervalSeconds >= POLICY.MIN_POLLING_INTERVAL_MS / 1000,
+    `configuration assert: notifyPollingIntervalSeconds must be at least every ${POLICY.MIN_POLLING_INTERVAL_MS}ms`)
+
+  // Relaxed backstop poll used only while NOTIFY is active for the queue; falls back to
+  // pollingInterval when notify is unavailable. It must never be smaller than the base poll,
+  // that would make a notify-active queue poll more aggressively than an idle one, the opposite
+  // of the intent. When explicit, reject a value below the base; when defaulted, floor it at the
+  // base so bumping pollingIntervalSeconds past 30s can't silently leave notify smaller.
+  if ('notifyPollingIntervalSeconds' in config) {
+    config.notifyPollingInterval = config.notifyPollingIntervalSeconds * 1000
+    assert(config.notifyPollingInterval >= config.pollingInterval,
+      'configuration assert: notifyPollingIntervalSeconds must be at least pollingIntervalSeconds')
+  } else {
+    config.notifyPollingInterval = Math.max(30000, config.pollingInterval)
+  }
+
+  // Burst triggers: no transform, just validation. Both put the worker into continuous-fetch
+  // (no delay) mode; see JobPollingOptions for precedence.
+  assert(!('burstWhenReadyExceeds' in config) || (Number.isInteger(config.burstWhenReadyExceeds) && config.burstWhenReadyExceeds >= 1),
+    'configuration assert: burstWhenReadyExceeds must be an integer >= 1')
+
+  assert(!('burstWhenBatchFull' in config) || typeof config.burstWhenBatchFull === 'boolean',
+    'configuration assert: burstWhenBatchFull must be a boolean')
+}
+
+function applyOpsConfig (config: any) {
+  assert(!('superviseIntervalSeconds' in config) || config.superviseIntervalSeconds >= 1,
+    'configuration assert: superviseIntervalSeconds must be at least every second')
+
+  config.superviseIntervalSeconds = config.superviseIntervalSeconds || 60
+
+  assert(config.superviseIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS,
+    `configuration assert: superviseIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+
+  assert(!('maintenanceIntervalSeconds' in config) || config.maintenanceIntervalSeconds >= 1,
+    'configuration assert: maintenanceIntervalSeconds must be at least every second')
+
+  config.maintenanceIntervalSeconds = config.maintenanceIntervalSeconds || POLICY.MAX_EXPIRATION_HOURS * 60 * 60
+
+  assert(config.maintenanceIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS,
+    `configuration assert: maintenanceIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+
+  assert(!('monitorIntervalSeconds' in config) || config.monitorIntervalSeconds >= 1,
+    'configuration assert: monitorIntervalSeconds must be at least every second')
+
+  config.monitorIntervalSeconds = config.monitorIntervalSeconds || 60
+
+  assert(config.monitorIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS,
+    `configuration assert: monitorIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+
+  assert(!('queueCacheIntervalSeconds' in config) || config.queueCacheIntervalSeconds >= 1,
+    'configuration assert: queueCacheIntervalSeconds must be at least every second')
+
+  config.queueCacheIntervalSeconds = config.queueCacheIntervalSeconds || 60
+
+  assert(config.queueCacheIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS,
+    `configuration assert: queueCacheIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+
+  if ('queueStatRetentionDays' in config) {
+    assert(Number.isInteger(config.queueStatRetentionDays) && config.queueStatRetentionDays >= 1,
+      'configuration assert: queueStatRetentionDays must be an integer >= 1')
+    assert(config.queueStatRetentionDays <= POLICY.MAX_RETENTION_DAYS,
+      `configuration assert: queueStatRetentionDays cannot exceed ${POLICY.MAX_RETENTION_DAYS} days`)
+  }
+
+  config.queueStatRetentionDays = config.queueStatRetentionDays || 7
+
+  validateReindexConfig(config)
+  validateVacuumMonitorConfig(config)
+}
+
+function validateReindexConfig (config: any) {
+  assert(!('reindex' in config) || typeof config.reindex === 'boolean' || (typeof config.reindex === 'object' && config.reindex !== null),
+    'configuration assert: reindex must be a boolean or an options object')
+
+  if (typeof config.reindex === 'object' && config.reindex !== null) {
+    const { minPages, maxEntriesPerPage, minSizeRatio, maxIndexBytes, force } = config.reindex
+
+    assert(minPages === undefined || (Number.isInteger(minPages) && minPages >= 0),
+      'configuration assert: reindex.minPages must be an integer >= 0')
+    assert(maxEntriesPerPage === undefined || (typeof maxEntriesPerPage === 'number' && maxEntriesPerPage > 0),
+      'configuration assert: reindex.maxEntriesPerPage must be a number > 0')
+    assert(minSizeRatio === undefined || (typeof minSizeRatio === 'number' && minSizeRatio >= 0),
+      'configuration assert: reindex.minSizeRatio must be a number >= 0')
+    assert(maxIndexBytes === undefined || (Number.isInteger(maxIndexBytes) && maxIndexBytes > 0),
+      'configuration assert: reindex.maxIndexBytes must be an integer > 0')
+    // force belongs to an explicit supervise() call, not to a background timer that would then
+    // rebuild every job index on every interval.
+    assert(force === undefined || force === false,
+      'configuration assert: reindex.force cannot be set in constructor options. Pass it to supervise()')
+  }
+
+  assert(!('reindexIntervalSeconds' in config) || config.reindexIntervalSeconds >= 1,
+    'configuration assert: reindexIntervalSeconds must be at least every second')
+
+  config.reindexIntervalSeconds = config.reindexIntervalSeconds || POLICY.MAX_EXPIRATION_HOURS * 60 * 60
+
+  assert(config.reindexIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS,
+    `configuration assert: reindexIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`)
+}
+
+function validateVacuumMonitorConfig (config: any) {
+  // A switch, not a threshold: the check derives its trigger from the server's own autovacuum
+  // settings and from measured dead tuples, so there is no number here for a caller to get wrong.
+  assert(!('monitorVacuum' in config) || typeof config.monitorVacuum === 'boolean',
+    'configuration assert: monitorVacuum must be a boolean')
+}
+
+function validateDeletionConfig (config: any) {
+  assert(!('deleteAfterSeconds' in config) || config.deleteAfterSeconds >= 0,
+    'configuration assert: deleteAfterSeconds must be at least 0 (0 disables deletion)')
+}
+
+function applyScheduleConfig (config: any) {
+  assert(!('clockMonitorIntervalSeconds' in config) || (config.clockMonitorIntervalSeconds >= 1 && config.clockMonitorIntervalSeconds <= 600),
+    'configuration assert: clockMonitorIntervalSeconds must be between 1 second and 10 minutes')
+
+  config.clockMonitorIntervalSeconds = config.clockMonitorIntervalSeconds || 600
+
+  assert(!('cronMonitorIntervalSeconds' in config) || (config.cronMonitorIntervalSeconds >= 1 && config.cronMonitorIntervalSeconds <= 45),
+    'configuration assert: cronMonitorIntervalSeconds must be between 1 and 45 seconds')
+
+  config.cronMonitorIntervalSeconds = config.cronMonitorIntervalSeconds || 30
+
+  assert(!('cronWorkerIntervalSeconds' in config) || (config.cronWorkerIntervalSeconds >= 1 && config.cronWorkerIntervalSeconds <= 45),
+    'configuration assert: cronWorkerIntervalSeconds must be between 1 and 45 seconds')
+
+  config.cronWorkerIntervalSeconds = config.cronWorkerIntervalSeconds || 5
+}
+
+function applyBamConfig (config: any) {
+  const minInterval = config.__test__bypass_bam_interval_check ? 1 : 10
+  assert(!('bamIntervalSeconds' in config) || config.bamIntervalSeconds >= minInterval,
+    `configuration assert: bamIntervalSeconds must be at least ${minInterval} seconds`)
+
+  config.bamIntervalSeconds = config.bamIntervalSeconds || 60
+}
+
+function applyFlowConfig (config: any) {
+  const minInterval = config.__test__bypass_flow_interval_check ? 0.5 : 1
+  assert(!('flowIntervalSeconds' in config) || config.flowIntervalSeconds >= minInterval,
+    `configuration assert: flowIntervalSeconds must be at least ${minInterval} seconds`)
+
+  config.flowIntervalSeconds = config.flowIntervalSeconds || 5
+}
+
+export {
+  assertKey,
+  assertListAfter,
+  assertListAfterRow,
+  assertListLimit,
+  COMPATIBILITY_FLAGS,
+  assertPostgresObjectName,
+  assertQueueName,
+  checkFetchArgs,
+  checkSendArgs,
+  checkUpdateArgs,
+  checkWorkArgs,
+  getConfig,
+  pinZonelessDateTime,
+  POLICY,
+  validateFlowJobs,
+  validateGroupConfig,
+  validateQueueArgs
+}

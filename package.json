@@ -1,0 +1,27 @@
+{
+  "name": "micron-law",
+  "version": "0.0.0",
+  "license": "UNLICENSED",
+  "scripts": {
+    "preinstall": "node scripts/check-package-manager.mjs",
+    "check": "node scripts/check-source.mjs",
+    "lint": "eslint .",
+    "test": "node --test lib/db/scripts/migrate.test.mjs && pnpm --filter @workspace/api-server test",
+    "build": "pnpm run check && pnpm -r --if-present run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0"
+  },
+  "author": "خالد",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22.17.0"
+  },
+  "type": "module"
+}

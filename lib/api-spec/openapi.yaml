@@ -1,0 +1,1321 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+servers:
+  - url: /api
+paths:
+  /clients:
+    get:
+      operationId: listLawyerClients
+      responses:
+        '200':
+          description: Private clients of authenticated lawyer
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/LawyerClient' } }
+    post:
+      operationId: createLawyerClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LawyerClientInput' }
+      responses:
+        '200':
+          description: Saved idempotent client
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawyerClient' }
+  /clients/{clientId}:
+    get:
+      operationId: getLawyerClient
+      parameters:
+        - { in: path, name: clientId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Client and owned related cases including archive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawyerClientDetail' }
+    patch:
+      operationId: updateLawyerClient
+      parameters:
+        - { in: path, name: clientId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LawyerClientFields' }
+      responses:
+        '200':
+          description: Edited client
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawyerClient' }
+  /clients/{clientId}/pin:
+    patch:
+      operationId: setLawyerClientPin
+      parameters:
+        - { in: path, name: clientId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientPinInput' }
+      responses:
+        '200':
+          description: Client pin saved for its owner without changing profile fields
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawyerClient' }
+  /cases/{caseId}/fees:
+    get:
+      operationId: getCaseFees
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Optional agreement and exact decimal SAR balances
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFees' }
+    put:
+      operationId: saveCaseFeeAgreement
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeeAgreementInput' }
+      responses:
+        '200':
+          description: Saved agreement without changing legal history
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFees' }
+  /cases/{caseId}/fee-receipts:
+    post:
+      operationId: createCaseFeeReceipt
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeeReceiptInput' }
+      responses:
+        '200':
+          description: Idempotent private receipt record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFees' }
+  /cases/{caseId}/fee-receipts/{receiptId}:
+    patch:
+      operationId: updateCaseFeeReceipt
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: receiptId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeeReceiptFields' }
+      responses:
+        '200':
+          description: Corrected receipt and recalculated balance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFees' }
+  /report-exports:
+    get:
+      operationId: exportSavedReport
+      parameters:
+        - { in: query, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: operationId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: versionId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: format, required: true, schema: { type: string, enum: [docx, pdf] } }
+      responses:
+        '200':
+          description: Exact selected saved version, Arabic RTL; no OpenAI
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              { schema: { type: string, format: binary } }
+  /case-folders:
+    get:
+      operationId: listCaseFolders
+      responses:
+        '200':
+          description: Flat folders owned by the lawyer
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CaseFolder' } }
+    post:
+      operationId: createCaseFolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CaseFolderInput' }
+      responses:
+        '200':
+          description: Saved folder
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFolder' }
+  /case-folders/{folderId}:
+    patch:
+      operationId: renameCaseFolder
+      parameters:
+        - { in: path, name: folderId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CaseFolderNameInput' }
+      responses:
+        '200':
+          description: Renamed folder; membership and evidence unchanged
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseFolder' }
+  /cases/{caseId}/reports/{operationId}/versions:
+    get:
+      operationId: listReportVersions
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Immutable original and append-only saved versions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ReportVersion' } }
+    post:
+      operationId: saveReportVersion
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveReportVersionInput' }
+      responses:
+        '200':
+          description: New saved version or idempotent same-request replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportVersion' }
+        '409': { description: Base version changed; preserve the unsaved draft }
+  /cases/{caseId}/reports/{operationId}/interactions:
+    get:
+      operationId: listReportInteractions
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Persisted focused paragraph requests, no execution on GET
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ReportInteraction' } }
+    post:
+      operationId: prepareReportInteraction
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportInteractionInput' }
+      responses:
+        '200':
+          description: Prepared only; independent paid approval required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportInteraction' }
+  /cases/{caseId}/reports/{operationId}/interactions/{interactionId}/reject:
+    post:
+      operationId: rejectReportInteraction
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: interactionId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Rejected proposal, no report mutation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportInteraction' }
+  /cases/{caseId}/reports/{operationId}/interactions/{interactionId}/execute:
+    post:
+      operationId: executeReportInteraction
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: interactionId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '202':
+          description: Once-only provider claim behind separate server-side approval; not enabled in this phase
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportInteraction' }
+        '403': { description: Paid paragraph execution closed or budget insufficient }
+  /cases/{caseId}/analysis-capability:
+    get:
+      operationId: getCaseAnalysisCapability
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Text-only eligibility and single-operation owner approval; never executes AI
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalysisCapability' }
+  /cases/{caseId}/analysis-operations/{operationId}/execute:
+    post:
+      operationId: executeCaseAnalysisOperation
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '202':
+          description: Durable running or terminal replay; provider work is independent of browser response
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalysisOperation' }
+        '403': { description: No explicit owner approval for this operation }
+        '409': { description: Text-only scope or initial-operation restriction }
+  /cases/{caseId}/analysis-operations:
+    get:
+      operationId: listCaseAnalysisOperations
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Persistent operations owned by the current lawyer, with expired runs marked failed
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AnalysisOperation' } }
+        '401': { description: Sign-in required }
+        '404': { description: Case not found for this lawyer }
+    post:
+      operationId: createCaseAnalysisOperation
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalysisOperationInput' }
+      responses:
+        '200':
+          description: Pending operation or idempotent replay; does not execute AI
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalysisOperation' }
+        '400': { description: Invalid input }
+        '401': { description: Sign-in required }
+        '403': { description: Invalid CSRF token or non-lawyer account }
+        '404': { description: Case or message not found for this lawyer }
+        '409':
+          { description: Another originating message already has an active operation for this case }
+  /cases/{caseId}/analysis-operations/{operationId}:
+    get:
+      operationId: getCaseAnalysisOperation
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: operationId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Owned operation and its saved validated result, if completed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalysisOperation' }
+        '401': { description: Sign-in required }
+        '404': { description: Operation not found in this owned case }
+  /cases:
+    get:
+      operationId: listCases
+      responses:
+        '200':
+          description: Cases owned by the current lawyer
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CaseInfo' } }
+    post:
+      operationId: createCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CaseCreationInput' }
+      responses:
+        '200':
+          description: Created case or idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseInfo' }
+  /cases/{caseId}:
+    patch:
+      operationId: organizeCase
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CaseOrganizationInput' }
+      responses:
+        '200':
+          description: Rename or move without changing evidence
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseInfo' }
+    get:
+      operationId: getCaseConversation
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Owned case and chronological conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseConversation' }
+  /cases/{caseId}/messages:
+    post:
+      operationId: sendCaseMessage
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MessageInput' }
+      responses:
+        '200':
+          description: Saved message or idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseMessage' }
+  /attachments/policy:
+    get:
+      operationId: getAttachmentPolicy
+      responses:
+        '200':
+          description: Current configurable attachment policy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [
+                    maxFileBytes,
+                    maxMessageAttachments,
+                    maxCaseAttachments,
+                    maxCaseBytes,
+                    maxPdfAnalysisBytes,
+                    formats,
+                  ]
+                properties:
+                  maxFileBytes: { type: integer }
+                  maxMessageAttachments: { type: integer }
+                  maxCaseAttachments: { type: integer }
+                  maxCaseBytes: { type: integer }
+                  maxPdfAnalysisBytes: { type: integer }
+                  maxPdfAnalysisCombinedBytes: { type: integer }
+                  maxPdfAnalysisAttachments: { type: integer }
+                  formats:
+                    type: array
+                    items:
+                      type: object
+                      required: [extension, contentTypes]
+                      properties:
+                        extension: { type: string }
+                        contentTypes: { type: array, items: { type: string } }
+  /cases/{caseId}/attachments:
+    post:
+      operationId: prepareAttachment
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachmentInput' }
+      responses:
+        '200':
+          description: Pending private upload or already completed replay
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachment, uploadUrl, expiresAt]
+                properties:
+                  attachment: { $ref: '#/components/schemas/CaseAttachment' }
+                  uploadUrl: { type: [string, 'null'] }
+                  expiresAt: { type: [string, 'null'] }
+  /cases/{caseId}/attachments/{attachmentId}:
+    delete:
+      operationId: removeUnsentAttachment
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: attachmentId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Original and staging storage deleted; repeated owner removal is safe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+        '409':
+          description: Attachment is already committed or is not a completed upload
+        '503':
+          description: Removal incomplete; retry with the same attachment ID
+  /cases/{caseId}/attachments/{attachmentId}/complete:
+    post:
+      operationId: completeAttachment
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: attachmentId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Storage bytes and metadata verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseAttachment' }
+  /cases/{caseId}/attachments/{attachmentId}/download:
+    get:
+      operationId: downloadAttachment
+      parameters:
+        - { in: path, name: caseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: attachmentId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Authorized original file bytes, never a public storage URL
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+  /healthz:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+  /auth/session:
+    get:
+      operationId: getSession
+      responses:
+        '200':
+          description: Current identity and CSRF token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfo' }
+  /auth/start:
+    post:
+      operationId: startRegistration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MobileInput' }
+      responses:
+        '200':
+          description: Verification challenge created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Challenge' }
+  /auth/verify:
+    post:
+      operationId: verifyMobile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationInput' }
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+  /auth/register:
+    post:
+      operationId: completeRegistration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistrationInput' }
+      responses:
+        '201':
+          description: Created and authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfo' }
+  /auth/login:
+    post:
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginInput' }
+      responses:
+        '200':
+          description: Authenticated using mobile and password without SMS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfo' }
+  /auth/password-reset/start:
+    post:
+      operationId: startPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MobileInput' }
+      responses:
+        '200':
+          description: Same generic response for existing and unknown accounts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Challenge' }
+  /auth/password-reset/verify:
+    post:
+      operationId: verifyPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationInput' }
+      responses:
+        '200':
+          description: Reset challenge verified, password not changed yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+  /auth/password-reset/complete:
+    post:
+      operationId: completePasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetInput' }
+      responses:
+        '200':
+          description: Password changed, prior sessions revoked, new 30-day lawyer session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfo' }
+  /auth/logout:
+    post:
+      operationId: logout
+      responses:
+        '200':
+          description: Session invalidated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+  /legal/documents:
+    get:
+      operationId: getLegalDocuments
+      responses:
+        '200':
+          description: Current published documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LegalDocument' }
+  /admin/login:
+    post:
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCredentials' }
+      responses:
+        '200':
+          description: Administrator authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfo' }
+  /admin/lawyers:
+    get:
+      operationId: getAdminLawyers
+      parameters:
+        - { $ref: '#/components/parameters/PageOffset' }
+        - { $ref: '#/components/parameters/PageLimit' }
+      responses:
+        '200':
+          description: Administrator-only registered lawyer accounts; no password/session fields
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminLawyerPage' }
+  /admin/acceptances:
+    get:
+      operationId: getAdminLawyerAcceptances
+      parameters:
+        - { in: query, name: lawyerId, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/PageOffset' }
+        - { $ref: '#/components/parameters/PageLimit' }
+      responses:
+        '200':
+          description: Immutable historical acceptance evidence for the selected lawyer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalAcceptancePage' }
+  /admin/audit-events:
+    get:
+      operationId: getAdminAuditEvents
+      parameters:
+        - { $ref: '#/components/parameters/PageOffset' }
+        - { $ref: '#/components/parameters/PageLimit' }
+      responses:
+        '200':
+          description: Administrator-only existing audit events and recorded evidence
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAuditPage' }
+  /admin/documents/{id}:
+    get:
+      operationId: getAdminHistoricalDocument
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Exact stored document version by ID, not latest by kind
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalDocument' }
+  /admin/documents:
+    get:
+      operationId: getAdminDocuments
+      responses:
+        '200':
+          description: Drafts and immutable published history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LegalDocument' }
+    post:
+      operationId: saveDocumentDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DocumentInput' }
+      responses:
+        '200':
+          description: Draft saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalDocument' }
+  /admin/documents/{id}/publish:
+    post:
+      operationId: publishDocument
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Draft published immutably
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalDocument' }
+components:
+  parameters:
+    PageOffset:
+      in: query
+      name: offset
+      schema: { type: integer, minimum: 0, maximum: 10000000, default: 0 }
+    PageLimit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+  schemas:
+    CaseFolderInput:
+      type: object
+      required: [requestId, name]
+      properties:
+        requestId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 100 }
+    CaseFolderNameInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        pinned: { type: boolean }
+    CaseOrganizationInput:
+      type: object
+      properties:
+        archived: { type: boolean }
+        clientId: { type: [string, 'null'], format: uuid }
+        title: { type: string, minLength: 1, maxLength: 180 }
+        folderId: { type: [string, 'null'], format: uuid }
+        pinned: { type: boolean }
+    CaseFolder:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        pinned: { type: boolean }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    ReportVersion:
+      type: object
+      required: [id, operationId, number, kind, parentId, createdAt, report]
+      properties:
+        id: { type: string, format: uuid }
+        operationId: { type: string, format: uuid }
+        number: { type: integer }
+        kind: { type: string, enum: [original, manual, ai_accepted, restore] }
+        parentId: { type: [string, 'null'] }
+        createdAt: { type: string }
+        report:
+          {
+            type: object,
+            additionalProperties: true,
+            description: 'Saved original eight-section report plus explicit block provenance; never alters approved provider Schema 0.1',
+          }
+    SaveReportVersionInput:
+      type: object
+      required: [requestId, baseVersionId]
+      properties:
+        requestId: { type: string, format: uuid }
+        baseVersionId: { type: string, format: uuid }
+        restoreVersionId: { type: string, format: uuid }
+        proposalId: { type: string, format: uuid }
+        edits:
+          type: array
+          items:
+            type: object
+            required: [sectionId, blockIndex, text]
+            properties:
+              sectionId: { type: string }
+              blockIndex: { type: integer, minimum: 0 }
+              text: { type: string, minLength: 1, maxLength: 20000 }
+    ReportInteractionInput:
+      type: object
+      required: [requestId, versionId, sectionId, blockIndex, kind, instruction]
+      properties:
+        requestId: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+        sectionId: { type: string }
+        blockIndex: { type: integer, minimum: 0 }
+        kind: { type: string, enum: [discuss, revise] }
+        instruction: { type: string, minLength: 1, maxLength: 4000 }
+    ReportInteraction:
+      type: object
+      required:
+        [
+          id,
+          versionId,
+          sectionId,
+          blockIndex,
+          kind,
+          instruction,
+          status,
+          answer,
+          proposedText,
+          sourceRefs,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+        sectionId: { type: string }
+        blockIndex: { type: integer }
+        kind: { type: string, enum: [discuss, revise] }
+        instruction: { type: string }
+        status: { type: string, enum: [prepared, running, completed, failed, accepted, rejected] }
+        executionApproved:
+          {
+            type: boolean,
+            description: 'Only separate exact-operation owner approval, never inherited from the analysis budget',
+          }
+        answer: { type: [string, 'null'] }
+        proposedText: { type: [string, 'null'] }
+        sourceRefs: { type: array, items: { type: string } }
+        createdAt: { type: string }
+    AnalysisCapability:
+      type: object
+      required: [eligible, executionEnabled, executableOperationId, reason]
+      properties:
+        eligible: { type: boolean }
+        executionEnabled: { type: boolean }
+        executableOperationId: { type: [string, 'null'] }
+        reason: { type: string }
+    AnalysisOperationInput:
+      type: object
+      additionalProperties: false
+      required: [messageId]
+      properties:
+        messageId: { type: string, format: uuid }
+        parentOperationId: { type: string, format: uuid }
+        attachmentId:
+          {
+            type: string,
+            format: uuid,
+            description: Legacy explicit single PDF selection; cannot combine with attachmentIds,
+          }
+        attachmentIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: Explicit ordered selection of saved documents; native processing enforces verified per-request provider capacities without dropping evidence
+    AnalysisOperation:
+      type: object
+      required:
+        [
+          id,
+          caseId,
+          messageId,
+          status,
+          result,
+          sourceRegistry,
+          failureCode,
+          createdAt,
+          updatedAt,
+          startedAt,
+          finishedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: string, format: uuid }
+        messageId: { type: string, format: uuid }
+        parentOperationId: { type: [string, 'null'], format: uuid }
+        followupRound: { type: integer }
+        status: { type: string, enum: [pending, running, completed, failed] }
+        result:
+          type: [object, 'null']
+          additionalProperties: true
+          description: Exact saved structured legal result; validated against the unchanged approved JSON Schema and branch rules
+        sourceRegistry:
+          type: array
+          items: { $ref: '#/components/schemas/AnalysisSource' }
+        pdfEvidence:
+          type: [object, 'null']
+          additionalProperties: true
+          description: Stored PDF identity, transfer evidence and status; does not certify page understanding
+        preparationError: { type: [string, 'null'] }
+        processingMessage: { type: [string, 'null'] }
+        failureCode:
+          {
+            type: [string, 'null'],
+            enum:
+              [
+                interrupted,
+                fixture_failure,
+                invalid_result,
+                provider_error,
+                timeout,
+                incomplete_response,
+                save_failed,
+                context_changed,
+                preparation_failed,
+                unsupported_input,
+                case_busy,
+                null,
+              ],
+          }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        startedAt: { type: [string, 'null'] }
+        finishedAt: { type: [string, 'null'] }
+    AnalysisSource:
+      type: object
+      required: [id, messageId, basis]
+      properties:
+        id: { type: string }
+        messageId: { type: string, format: uuid }
+        basis: { type: string, enum: [lawyer_statement, documented] }
+        attachmentId: { type: string, format: uuid }
+        filename: { type: string }
+        generation: { type: string }
+        sha256: { type: string }
+    AdminLawyer:
+      type: object
+      required: [id, name, username, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: string }
+        createdAt: { type: string }
+    AdminLawyerPage:
+      type: object
+      required: [items, total, offset, limit]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AdminLawyer' } }
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+    LegalAcceptance:
+      type: object
+      required:
+        [
+          id,
+          userId,
+          mobile,
+          documentId,
+          documentTitle,
+          documentVersion,
+          contentHash,
+          action,
+          auditId,
+          ip,
+          userAgent,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        mobile: { type: string }
+        documentId: { type: string, format: uuid }
+        documentTitle: { type: string }
+        documentVersion: { type: integer }
+        contentHash: { type: string }
+        action: { type: string }
+        auditId: { type: string, format: uuid }
+        ip: { type: string }
+        userAgent: { type: string }
+        createdAt: { type: string }
+    LegalAcceptancePage:
+      type: object
+      required: [items, total, offset, limit]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/LegalAcceptance' } }
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+    AdminAuditEvent:
+      type: object
+      required: [id, actorId, actor, action, ip, userAgent, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        actorId: { type: [string, 'null'] }
+        actor:
+          anyOf:
+            - { $ref: '#/components/schemas/User' }
+            - { type: 'null' }
+        action: { type: string }
+        ip: { type: string }
+        userAgent: { type: string }
+        createdAt: { type: string }
+    AdminAuditPage:
+      type: object
+      required: [items, total, offset, limit]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AdminAuditEvent' } }
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+    CaseCreationInput:
+      type: object
+      required: [requestId]
+      properties:
+        requestId: { type: string, format: uuid }
+    CaseInfo:
+      type: object
+      required: [id, title, taskType, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        taskType: { type: string, enum: [analysis] }
+        folderId: { type: [string, 'null'] }
+        pinned: { type: boolean }
+        archivedAt: { type: [string, 'null'] }
+        clientId: { type: [string, 'null'] }
+        clientName: { type: [string, 'null'] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    LawyerClientFields:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 180 }
+        type: { type: [string, 'null'], enum: [individual, organization, null] }
+        mobile: { type: string, maxLength: 40 }
+        email: { type: string, maxLength: 254 }
+        reference: { type: string, maxLength: 200 }
+        notes: { type: string, maxLength: 5000 }
+    LawyerClientInput:
+      allOf:
+        - { $ref: '#/components/schemas/LawyerClientFields' }
+        - type: object
+          required: [requestId]
+          properties:
+            requestId: { type: string, format: uuid }
+    ClientPinInput:
+      type: object
+      required: [pinned]
+      properties:
+        pinned: { type: boolean }
+    LawyerClient:
+      allOf:
+        - { $ref: '#/components/schemas/LawyerClientFields' }
+        - type: object
+          required: [id, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            createdAt: { type: string }
+            updatedAt: { type: string }
+            pinned: { type: boolean }
+    LawyerClientDetail:
+      type: object
+      required: [client, cases]
+      properties:
+        client: { $ref: '#/components/schemas/LawyerClient' }
+        cases: { type: array, items: { $ref: '#/components/schemas/CaseInfo' } }
+    FeeAgreementInput:
+      type: object
+      required: [agreedAmount]
+      additionalProperties: false
+      properties:
+        agreedAmount: { type: [string, 'null'], pattern: '^\d{1,12}(\.\d{1,2})?$' }
+        terms: { type: string, maxLength: 5000 }
+        notes: { type: string, maxLength: 5000 }
+    FeeReceiptFields:
+      type: object
+      required: [amount, receivedOn]
+      properties:
+        amount: { type: string, pattern: '^\d{1,12}(\.\d{1,2})?$' }
+        # Calendar-only value: retain YYYY-MM-DD rather than coercing to an instant.
+        receivedOn: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        notes: { type: string, maxLength: 2000 }
+    FeeReceiptInput:
+      allOf:
+        - { $ref: '#/components/schemas/FeeReceiptFields' }
+        - type: object
+          required: [requestId]
+          properties:
+            requestId: { type: string, format: uuid }
+    FeeReceipt:
+      allOf:
+        - { $ref: '#/components/schemas/FeeReceiptFields' }
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string, format: uuid }
+    CaseFees:
+      type: object
+      required: [currency, agreedAmount, terms, notes, receivedAmount, outstandingAmount, receipts]
+      properties:
+        currency: { type: string, enum: [SAR] }
+        agreedAmount: { type: [string, 'null'] }
+        terms: { type: string }
+        notes: { type: string }
+        receivedAmount: { type: string }
+        outstandingAmount: { type: [string, 'null'] }
+        receipts: { type: array, items: { $ref: '#/components/schemas/FeeReceipt' } }
+    CaseAttachment:
+      type: object
+      required:
+        [
+          id,
+          caseId,
+          messageId,
+          filename,
+          contentType,
+          size,
+          status,
+          createdAt,
+          readyAt,
+          downloadUrl,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: string, format: uuid }
+        messageId: { type: [string, 'null'] }
+        filename: { type: string }
+        contentType: { type: string }
+        size: { type: integer }
+        status: { type: string, enum: [pending, ready, rejected, removing] }
+        createdAt: { type: string }
+        readyAt: { type: [string, 'null'] }
+        downloadUrl: { type: [string, 'null'] }
+    CaseMessage:
+      type: object
+      required: [id, caseId, requestId, content, sequence, createdAt, attachments]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        content: { type: string }
+        clarification: { $ref: '#/components/schemas/ClarificationLink' }
+        sequence: { type: integer }
+        createdAt: { type: string }
+        attachments: { type: array, items: { $ref: '#/components/schemas/CaseAttachment' } }
+    CaseConversation:
+      type: object
+      required: [caseInfo, messages, attachments]
+      properties:
+        caseInfo: { $ref: '#/components/schemas/CaseInfo' }
+        messages: { type: array, items: { $ref: '#/components/schemas/CaseMessage' } }
+        attachments: { type: array, items: { $ref: '#/components/schemas/CaseAttachment' } }
+        reportQuestions:
+          type: array
+          items: { $ref: '#/components/schemas/ReportQuestion' }
+    ReportQuestion:
+      type: object
+      required: [id, requestId, operationId, versionId, status, instruction, answer]
+      properties:
+        id: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        operationId: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+        status: { type: string }
+        instruction: { type: string }
+        answer: { type: [string, 'null'] }
+    ReportQuestionLink:
+      type: object
+      additionalProperties: false
+      required: [operationId, versionId]
+      properties:
+        operationId: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+    MessageInput:
+      type: object
+      required: [requestId, content, attachmentIds]
+      properties:
+        requestId: { type: string, format: uuid }
+        content: { type: string, maxLength: 20000 }
+        startAnalysis:
+          type: boolean
+          description: Explicit manual Send intent; save, prepare and start once under the existing execution gates. Omitted means save only.
+        newAnalysis:
+          type: boolean
+          description: Explicit lawyer action to start a new complete analysis after a saved report.
+        reportQuestion: { $ref: '#/components/schemas/ReportQuestionLink' }
+        clarification: { $ref: '#/components/schemas/ClarificationLink' }
+        attachmentIds:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    ClarificationLink:
+      type: object
+      additionalProperties: false
+      required: [operationId, questionIds]
+      properties:
+        operationId: { type: string, format: uuid }
+        questionIds:
+          type: array
+          minItems: 0
+          maxItems: 3
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 200 }
+    AttachmentInput:
+      type: object
+      required: [requestId, filename, contentType, size]
+      properties:
+        requestId: { type: string, format: uuid }
+        filename: { type: string, minLength: 1, maxLength: 240 }
+        contentType: { type: string, maxLength: 100 }
+        size: { type: integer, minimum: 1 }
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+    ActionResult:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    User:
+      type: object
+      required: [id, name, username, role]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [lawyer, admin] }
+    SessionInfo:
+      type: object
+      required: [csrfToken, user, developmentOtp]
+      properties:
+        csrfToken: { type: string }
+        developmentOtp: { type: boolean }
+        user:
+          anyOf:
+            - { $ref: '#/components/schemas/User' }
+            - { type: 'null' }
+    MobileInput:
+      type: object
+      required: [mobile]
+      properties:
+        mobile: { type: string, maxLength: 30 }
+    Challenge:
+      type: object
+      required: [mobile, expiresAt]
+      properties:
+        mobile: { type: string }
+        expiresAt: { type: string }
+        message: { type: string }
+    VerificationInput:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, maxLength: 10 }
+    RegistrationInput:
+      type: object
+      required: [password, confirmPassword, acceptedDocumentIds]
+      properties:
+        name: { type: string, maxLength: 120 }
+        password: { type: string, minLength: 12, maxLength: 128 }
+        confirmPassword: { type: string, minLength: 12, maxLength: 128 }
+        acceptedDocumentIds:
+          type: array
+          items: { type: string }
+          minItems: 3
+          maxItems: 3
+    LoginInput:
+      type: object
+      required: [mobile, password]
+      properties:
+        mobile: { type: string, maxLength: 30 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    PasswordResetInput:
+      type: object
+      required: [password, confirmPassword]
+      properties:
+        password: { type: string, minLength: 12, maxLength: 128 }
+        confirmPassword: { type: string, minLength: 12, maxLength: 128 }
+    AdminCredentials:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    LegalDocument:
+      type: object
+      required: [id, kind, title, content, version, published, testing, createdAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [terms, usage, privacy] }
+        title: { type: string }
+        content: { type: string }
+        version: { type: integer }
+        published: { type: boolean }
+        testing: { type: boolean }
+        createdAt: { type: string }
+    DocumentInput:
+      type: object
+      required: [kind, content, testing]
+      properties:
+        kind: { type: string, enum: [terms, usage, privacy] }
+        content: { type: string, minLength: 1, maxLength: 100000 }
+        testing: { type: boolean }

@@ -1,0 +1,14 @@
+{
+  "name": "@workspace/api-spec",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "codegen": "orval --config ./orval.config.js && node ../../scripts/compile-api-client.mjs"
+  },
+  "devDependencies": {
+    "orval": "^8.30.0"
+  },
+  "author": "خالد",
+  "license": "UNLICENSED",
+  "type": "module"
+}

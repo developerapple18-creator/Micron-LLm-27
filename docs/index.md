@@ -1,0 +1,151 @@
+---
+layout: home
+
+hero:
+  name: pg-boss
+  tagline: Queueing jobs in Postgres from Node.js like a boss
+  actions:
+    - theme: brand
+      text: Get Started
+      link: /introduction
+    - theme: alt
+      text: API Reference
+      link: /api/constructor
+  
+features:
+  - title: Production-grade policies
+    details: Rate limiting, debouncing, concurrency, priorities, dead-letter queues and retries with exponential backoff.
+    link: /api/queues
+    linkText: Queue policies
+  - title: Transactional & ORM-ready
+    details: Send or complete jobs inside your existing transaction with adapters for Drizzle, Knex, Kysely and Prisma, or let transactional workers commit a handler's writes with its job.
+    link: /api/adapters
+    linkText: Adapters
+  - title: Low-latency workers
+    details: Backpressure-aware polling workers with optional LISTEN/NOTIFY for rapid delivery.
+    link: /api/workers
+    linkText: Workers
+  - title: Workflows & scheduling
+    details: Job dependency orchestration, cron scheduling and job deferral for multi-step pipelines.
+    link: /api/jobs
+    linkText: Jobs & flows
+  - title: Web dashboard & HTTP proxy
+    details: A web dashboard to monitor and manage queues and jobs, and an HTTP proxy for calling pg-boss from any language or runtime.
+    link: /dashboard
+    linkText: Dashboard
+  - title: Runs anywhere Postgres does
+    details: Serverless and multi-master friendly, with CockroachDB, Citus and embedded PGlite support.
+    link: /database-backends
+    linkText: Database backends
+
+---
+
+<!-- The content below is generated from README.md by scripts/sync-readme.js. Do not edit it directly. -->
+
+```js
+async function readme() {
+  const { PgBoss } = require('pg-boss');
+  const boss = new PgBoss('postgres://user:pass@host/database');
+
+  boss.on('error', console.error)
+
+  await boss.start()
+
+  const queue = 'readme-queue'
+
+  await boss.createQueue(queue)
+
+  const id = await boss.send(queue, { arg1: 'read me' })
+
+  console.log(`created job ${id} in queue ${queue}`)
+
+  await boss.work(queue, async ([ job ]) => {
+    console.log(`received job ${job.id} with data ${JSON.stringify(job.data)}`)
+  })
+}
+
+readme()
+  .catch(err => {
+    console.log(err)
+    process.exit(1)
+  })
+```
+
+pg-boss is a job queue built in Node.js on top of PostgreSQL in order to provide background processing and reliable asynchronous execution to Node.js applications.
+
+pg-boss relies on Postgres's SKIP LOCKED, a feature built specifically for message queues to resolve record locking challenges inherent with relational databases. Concurrent workers claim jobs without blocking each other, and job processing gets the safety of guaranteed atomic commits.
+
+This will likely cater the most to teams already familiar with the simplicity of relational database semantics and operations (SQL, querying, and backups). It will be especially useful to those already relying on PostgreSQL that want to limit how many systems are required to monitor and support in their architecture.
+
+
+## Summary
+* Create jobs in an existing db transaction, including adapters for popular ORMs such as Drizzle, Knex, Kysely, Prisma
+* Backpressure-compatible polling workers, including support for LISTEN/NOTIFY low latency delivery
+* Job dependency workflow orchestration
+* Cron and RRULE scheduling, job deferral
+* Queue storage policies to support a variety of rate limiting, debouncing, and concurrency use cases
+* Priority queues, dead letter queues with redrive, automatic retries with exponential backoff
+* Pub/sub API for fan-out queue relationships
+* SQL support for non-Node.js runtimes for most operations
+* Serverless function compatible
+* [OpenTelemetry](/opentelemetry) traces and metrics
+* Multi-master compatible (for example, in a Kubernetes ReplicaSet)
+* [Additional database backends](/database-backends) for Postgres-based databases such as CockroachDB and Citus. Or, use embedded PGlite for running entirely in-process.
+
+## CLI
+
+pg-boss includes a command-line interface if needed for managing database migrations without writing code. This is useful for CI/CD pipelines, database setup scripts, or manual schema management.
+
+See the [CLI documentation](/cli) for details.
+
+## Dashboard
+
+A web-based dashboard is available in the [`@pg-boss/dashboard`](https://www.npmjs.com/package/@pg-boss/dashboard) package for monitoring and managing jobs, queues and schedules.
+
+See the [dashboard documentation](/dashboard) for details.
+
+## Proxy
+
+A HTTP proxy is available in the [`@pg-boss/proxy`](https://www.npmjs.com/package/@pg-boss/proxy) package if needed to support use cases such as platform compatibility and connection pooling or scalability.
+
+See the [proxy documentation](/proxy) for details.
+
+## Requirements
+* Node 22.12 or higher, or Bun
+* PostgreSQL 13 or higher
+
+## Sponsors
+
+pg-boss is MIT licensed and always will be. It is maintained by one person, and sponsorship is what pays for the maintenance, security response, and support behind it.
+
+[Become a sponsor](https://github.com/sponsors/timgit), or see everyone who already does on the [sponsors page](/sponsors).
+
+<!-- sponsors:start The logos below are generated from GitHub Sponsors by scripts/sync-sponsors.js. Do not edit them directly. -->
+<div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1.5rem 0;">
+  <a href="https://superpower.com/" target="_blank" rel="noopener"><img src="https://avatars.githubusercontent.com/u/114334709?s=256&amp;v=4" alt="Superpower" title="Superpower" width="96" height="96" style="border-radius: 8px;"></a>
+  <a href="https://altruistiq.com/" target="_blank" rel="noopener"><img src="https://avatars.githubusercontent.com/u/88195975?s=256&amp;v=4" alt="Altruistiq" title="Altruistiq" width="64" height="64" style="border-radius: 8px;"></a>
+  <a href="https://wasp.sh/" target="_blank" rel="noopener"><img src="https://avatars.githubusercontent.com/u/55102317?s=256&amp;v=4" alt="wasp-lang" title="wasp-lang" width="64" height="64" style="border-radius: 8px;"></a>
+  <a href="https://github.com/Ferry-Health" target="_blank" rel="noopener"><img src="https://avatars.githubusercontent.com/u/158637456?s=256&amp;v=4" alt="Ferry Health" title="Ferry Health" width="64" height="64" style="border-radius: 8px;"></a>
+</div>
+<!-- sponsors:end -->
+
+## Contributing
+To setup a development environment for this library:
+
+```bash
+git clone https://github.com/timgit/pg-boss.git
+npm install
+```
+
+To run the test suite, linter and code coverage:
+```bash
+npm run cover
+```
+
+The test suite will try and create a new database named pgboss. The [config.json](https://github.com/timgit/pg-boss/blob/master/test/config.json) file has the default credentials to connect to postgres.
+
+The [Docker Compose](https://github.com/timgit/pg-boss/blob/master/docker-compose.yaml) file can be used to start a local postgres instance for testing:
+
+```bash
+docker compose up
+```

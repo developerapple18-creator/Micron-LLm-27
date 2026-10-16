@@ -1,0 +1,373 @@
+import { z } from '@hono/zod-openapi'
+import { previewScheduleMaxCount } from 'pg-boss'
+import {
+  cancelRequestSchema,
+  cancelResponseSchema,
+  completeRequestSchema,
+  completeResponseSchema,
+  createQueueRequestSchema,
+  createQueueResponseSchema,
+  deleteAllJobsRequestSchema,
+  deleteAllJobsResponseSchema,
+  deleteJobRequestSchema,
+  deleteJobResponseSchema,
+  deleteQueueRequestSchema,
+  deleteQueueResponseSchema,
+  deleteQueuedJobsRequestSchema,
+  deleteQueuedJobsResponseSchema,
+  deleteStoredJobsRequestSchema,
+  deleteStoredJobsResponseSchema,
+  failRequestSchema,
+  failResponseSchema,
+  fetchRequestSchema,
+  fetchResponseSchema,
+  flowRequestSchema,
+  flowResponseSchema,
+  findJobsResponseSchema,
+  getBamStatusResponseSchema,
+  getReindexCommandsResponseSchema,
+  getBlockedKeysResponseSchema,
+  getDependenciesResponseSchema,
+  getDependentsResponseSchema,
+  getQueueResponseSchema,
+  getQueueStatsResponseSchema,
+  getQueuesResponseSchema,
+  getScheduleResponseSchema,
+  getSchedulesResponseSchema,
+  previewScheduleResponseSchema,
+  insertRequestSchema,
+  insertResponseSchema,
+  isInstalledResponseSchema,
+  publishRequestSchema,
+  publishResponseSchema,
+  redriveRequestSchema,
+  redriveResponseSchema,
+  previewRedriveRequestSchema,
+  previewRedriveResponseSchema,
+  resumeRequestSchema,
+  resumeResponseSchema,
+  retryRequestSchema,
+  retryResponseSchema,
+  scheduleRequestSchema,
+  scheduleResponseSchema,
+  schemaVersionResponseSchema,
+  sendAfterRequestSchema,
+  sendAfterResponseSchema,
+  sendDebouncedRequestSchema,
+  sendDebouncedResponseSchema,
+  sendRequestSchema,
+  sendResponseSchema,
+  sendThrottledRequestSchema,
+  sendThrottledResponseSchema,
+  subscribeRequestSchema,
+  subscribeResponseSchema,
+  superviseRequestSchema,
+  superviseResponseSchema,
+  touchRequestSchema,
+  touchResponseSchema,
+  unsubscribeRequestSchema,
+  unsubscribeResponseSchema,
+  unscheduleRequestSchema,
+  unscheduleResponseSchema,
+  updateQueueRequestSchema,
+  updateQueueResponseSchema,
+  updateRequestSchema,
+  updateResponseSchema,
+  upsertRequestSchema,
+  upsertResponseSchema,
+  UUID_INPUT
+} from './contracts.js'
+
+export function withOptionalDataOptions (args: unknown[], data?: unknown, options?: unknown) {
+  if (data !== undefined || options !== undefined) {
+    args.push(data ?? null)
+  }
+  if (options !== undefined) {
+    args.push(options)
+  }
+  return args
+}
+
+export function withFixedDataOptions (args: unknown[], data?: unknown, options?: unknown, tail: unknown[] = []) {
+  const result = [...args, data ?? null, options ?? null, ...tail]
+  while (result.length > 0 && result[result.length - 1] === undefined) {
+    result.pop()
+  }
+  return result
+}
+
+export function withOptionalOptions (args: unknown[], options?: unknown) {
+  if (options !== undefined) {
+    args.push(options)
+  }
+  return args
+}
+
+export type RouteEntry = {
+  method: string
+  httpMethod: 'get' | 'post'
+  tag: string
+  request?: z.ZodTypeAny
+  querySchema?: z.ZodTypeAny
+  response: z.ZodTypeAny
+  args: (input?: unknown) => unknown[]
+}
+
+const post = <Schema extends z.ZodTypeAny>(
+  tag: string,
+  method: string,
+  request: Schema,
+  response: z.ZodTypeAny,
+  args: (body: z.infer<Schema>) => unknown[]
+): RouteEntry => ({
+    method,
+    httpMethod: 'post',
+    tag,
+    request,
+    response,
+    args: (body: unknown) => args(body as z.infer<Schema>)
+  })
+
+const get = (
+  tag: string,
+  method: string,
+  response: z.ZodTypeAny,
+  querySchema?: z.ZodTypeAny,
+  args?: (query: Record<string, unknown>) => unknown[]
+): RouteEntry => ({
+  method,
+  httpMethod: 'get',
+  tag,
+  querySchema,
+  response,
+  args: args
+    ? (query: unknown) => args(query as Record<string, unknown>)
+    : () => []
+})
+
+// Query schemas for GET endpoints (transport-layer schemas with string coercion)
+const nameQuerySchema = z.object({
+  name: z.string().min(1)
+})
+
+// The limit of the bounded list reads, as core's ListOptions takes it: 1 to 100,000.
+const limitQuery = z.coerce.number().int().positive().max(100000).optional()
+
+// Where a page starts: the previous page's last name, key or id. Schedules and dependencies page
+// by a pair, sent as afterName with afterKey or afterId.
+const afterQuery = z.string().min(1).optional()
+
+// An after that names a job by id, checked as core checks it, so a malformed cursor is a 400 rather
+// than a 500.
+const afterIdQuery = z.string().regex(UUID_INPUT, 'must be a uuid').optional()
+
+// The ListOptions argument for a route's call, left out when the request gave neither a limit nor
+// an after.
+const listOptions = (q: { limit?: number }, after?: unknown) => {
+  const options: Record<string, unknown> = {}
+  if (q.limit !== undefined) options.limit = q.limit
+  if (after !== undefined) options.after = after
+  return Object.keys(options).length > 0 ? [options] : []
+}
+
+const afterPair = (name: unknown, other: unknown, field: 'key' | 'id') =>
+  typeof name === 'string' && typeof other === 'string' ? { name, [field]: other } : undefined
+
+const namesQuerySchema = z.object({
+  names: z.union([z.array(z.string()), z.string().transform((s) => [s])]).optional(),
+  limit: limitQuery,
+  after: afterQuery
+})
+
+const schedulesQuerySchema = z.object({
+  name: z.string().optional(),
+  key: z.string().optional(),
+  limit: limitQuery,
+  afterName: afterQuery,
+  afterKey: z.string().optional()
+}).refine((q) => (q.afterName === undefined) === (q.afterKey === undefined), {
+  message: 'afterName and afterKey go together'
+})
+
+// getSchedule reads one row by its primary key, so unlike getSchedules the name is required. The
+// key stays optional, since the method defaults it to the empty string schedule() writes.
+const scheduleQuerySchema = z.object({
+  name: z.string().min(1),
+  key: z.string().optional()
+})
+
+// previewSchedule maps onto PreviewScheduleOptions. GET params arrive as strings, so `from`
+// transforms to the Date the option expects and `count` coerces; both are optional, as is `tz`, so
+// an omitted param leaves the method's own default in place.
+//
+// The count ceiling is the core's own, so a count past it is a 400 naming the parameter rather than
+// a 500 carrying the assertion text, and the generated OpenAPI parameter says what the limit is
+// instead of leaving a client to find it by being refused.
+const previewScheduleQuerySchema = z.object({
+  cron: z.string().min(1),
+  tz: z.string().optional(),
+  from: z.iso.datetime().transform((v) => new Date(v)).optional(),
+  count: z.coerce.number().int().positive().max(previewScheduleMaxCount).optional()
+})
+
+const findJobsQuerySchema = z.object({
+  name: z.string().min(1),
+  id: z.string().optional(),
+  key: z.string().optional(),
+  queued: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  dataKey: z.string().optional(),
+  dataValue: z.string().optional(),
+  limit: limitQuery,
+  after: afterIdQuery
+}).refine((q) => !q.dataValue || q.dataKey, {
+  message: 'dataKey is required when dataValue is provided'
+})
+
+const blockedKeysQuerySchema = z.object({
+  name: z.string().min(1),
+  limit: limitQuery,
+  after: afterQuery
+})
+
+// getQueueStats query params map onto pg-boss QueueStatsOptions. GET params arrive as strings, so
+// dates transform to Date (the option type) and numerics/booleans coerce; all are optional.
+const queueStatsQuerySchema = z.object({
+  name: z.string().min(1),
+  from: z.iso.datetime().transform((v) => new Date(v)).optional(),
+  to: z.iso.datetime().transform((v) => new Date(v)).optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  bucketSeconds: z.coerce.number().int().positive().optional(),
+  maxDataPoints: z.coerce.number().int().positive().optional(),
+  aggregate: z.enum(['max', 'min', 'avg']).optional(),
+  // A comma-separated list of percents, such as percentiles=50,95
+  percentiles: z.string().transform((v) => v.split(',').map((p) => (p.trim() === '' ? NaN : Number(p))))
+    .pipe(z.array(z.number().min(1).max(100)).min(1)).optional(),
+  force: z.enum(['true', 'false']).transform((v) => v === 'true').optional()
+})
+
+// getReindexCommands options are flat scalars, so they map onto GET query params like getQueueStats
+const reindexCommandsQuerySchema = z.object({
+  minPages: z.coerce.number().int().positive().optional(),
+  maxEntriesPerPage: z.coerce.number().int().positive().optional(),
+  minSizeRatio: z.coerce.number().positive().optional(),
+  maxIndexBytes: z.coerce.number().int().positive().optional(),
+  force: z.enum(['true', 'false']).transform((v) => v === 'true').optional()
+})
+
+const dependencyQuerySchema = z.object({
+  name: z.string().min(1),
+  id: z.string().min(1),
+  limit: limitQuery,
+  afterName: afterQuery,
+  afterId: afterIdQuery
+}).refine((q) => (q.afterName === undefined) === (q.afterId === undefined), {
+  message: 'afterName and afterId go together'
+})
+
+export const postMethods: RouteEntry[] = [
+  post('jobs', 'send', sendRequestSchema, sendResponseSchema, (body) => withOptionalDataOptions([body.name], body.data, body.options)),
+  post('jobs', 'sendAfter', sendAfterRequestSchema, sendAfterResponseSchema, (body) => withFixedDataOptions([body.name], body.data, body.options, [body.after])),
+  post('jobs', 'sendThrottled', sendThrottledRequestSchema, sendThrottledResponseSchema, (body) => withFixedDataOptions([body.name], body.data, body.options, [body.seconds, body.key])),
+  post('jobs', 'sendDebounced', sendDebouncedRequestSchema, sendDebouncedResponseSchema, (body) => withFixedDataOptions([body.name], body.data, body.options, [body.seconds, body.key])),
+  post('jobs', 'insert', insertRequestSchema, insertResponseSchema, (body) => withOptionalOptions([body.name, body.jobs], body.options)),
+  // data passes through verbatim (not withOptionalDataOptions): update/upsert distinguish
+  // absent data (leave payload unchanged) from null (clear it)
+  post('jobs', 'update', updateRequestSchema, updateResponseSchema, (body) => [body.name, body.data, body.options]),
+  post('jobs', 'upsert', upsertRequestSchema, upsertResponseSchema, (body) => [body.name, body.data, body.options]),
+  post('jobs', 'flow', flowRequestSchema, flowResponseSchema, (body) => [body.jobs]),
+  post('jobs', 'fetch', fetchRequestSchema, fetchResponseSchema, (body) => withOptionalOptions([body.name], body.options)),
+  post('jobs', 'complete', completeRequestSchema, completeResponseSchema, (body) => withOptionalDataOptions([body.name, body.id], body.data, body.options)),
+  post('jobs', 'fail', failRequestSchema, failResponseSchema, (body) => withOptionalDataOptions([body.name, body.id], body.data)),
+  post('jobs', 'cancel', cancelRequestSchema, cancelResponseSchema, (body) => [body.name, body.id]),
+  post('jobs', 'resume', resumeRequestSchema, resumeResponseSchema, (body) => [body.name, body.id]),
+  post('jobs', 'retry', retryRequestSchema, retryResponseSchema, (body) => [body.name, body.id]),
+  post('jobs', 'deleteJob', deleteJobRequestSchema, deleteJobResponseSchema, (body) => [body.name, body.id]),
+  post('jobs', 'touch', touchRequestSchema, touchResponseSchema, (body) => [body.name, body.id]),
+  post('jobs', 'redrive', redriveRequestSchema, redriveResponseSchema, (body) => withOptionalOptions([body.name], body.options)),
+  post('jobs', 'previewRedrive', previewRedriveRequestSchema, previewRedriveResponseSchema, (body) => withOptionalOptions([body.name], body.options)),
+  post('jobs', 'deleteQueuedJobs', deleteQueuedJobsRequestSchema, deleteQueuedJobsResponseSchema, (body) => [body.name]),
+  post('jobs', 'deleteStoredJobs', deleteStoredJobsRequestSchema, deleteStoredJobsResponseSchema, (body) => [body.name]),
+  post('jobs', 'deleteAllJobs', deleteAllJobsRequestSchema, deleteAllJobsResponseSchema, (body) => (body.name ? [body.name] : [])),
+  post('queues', 'createQueue', createQueueRequestSchema, createQueueResponseSchema, (body) => withOptionalOptions([body.name], body.options)),
+  post('queues', 'updateQueue', updateQueueRequestSchema, updateQueueResponseSchema, (body) => withOptionalOptions([body.name], body.options)),
+  post('queues', 'deleteQueue', deleteQueueRequestSchema, deleteQueueResponseSchema, (body) => [body.name]),
+  post('events', 'subscribe', subscribeRequestSchema, subscribeResponseSchema, (body) => [body.event, body.name]),
+  post('events', 'unsubscribe', unsubscribeRequestSchema, unsubscribeResponseSchema, (body) => [body.event, body.name]),
+  post('events', 'publish', publishRequestSchema, publishResponseSchema, (body) => withOptionalDataOptions([body.event], body.data, body.options)),
+  post('schedules', 'schedule', scheduleRequestSchema, scheduleResponseSchema, (body) => withOptionalDataOptions([body.name, body.cron], body.data, body.options)),
+  post('schedules', 'unschedule', unscheduleRequestSchema, unscheduleResponseSchema, (body) => (body.key ? [body.name, body.key] : [body.name])),
+  // supervise(name?, options?): options alone still has to reach the second argument
+  post('system', 'supervise', superviseRequestSchema, superviseResponseSchema, (body) => (
+    body.options ? [body.name, body.options] : (body.name ? [body.name] : [])
+  ))
+]
+
+export const getMethods: RouteEntry[] = [
+  get('system', 'isInstalled', isInstalledResponseSchema),
+  get('system', 'schemaVersion', schemaVersionResponseSchema),
+  get('system', 'getBamStatus', getBamStatusResponseSchema),
+  get('system', 'getReindexCommands', getReindexCommandsResponseSchema, reindexCommandsQuerySchema, (q) => {
+    const options: Record<string, unknown> = {}
+    if (q.minPages !== undefined) options.minPages = q.minPages
+    if (q.maxEntriesPerPage !== undefined) options.maxEntriesPerPage = q.maxEntriesPerPage
+    if (q.minSizeRatio !== undefined) options.minSizeRatio = q.minSizeRatio
+    if (q.maxIndexBytes !== undefined) options.maxIndexBytes = q.maxIndexBytes
+    if (q.force !== undefined) options.force = q.force
+    return Object.keys(options).length > 0 ? [options] : []
+  }),
+  get('queues', 'getQueue', getQueueResponseSchema, nameQuerySchema, (q) => [q.name]),
+  get('queues', 'getBlockedKeys', getBlockedKeysResponseSchema, blockedKeysQuerySchema, (q) => [q.name, ...listOptions(q, q.after)]),
+  get('queues', 'getQueues', getQueuesResponseSchema, namesQuerySchema, (q) => {
+    const options = listOptions(q, q.after)
+    return q.names || options.length ? [q.names, ...options] : []
+  }),
+  get('queues', 'getQueueStats', getQueueStatsResponseSchema, queueStatsQuerySchema, (q) => {
+    const options: Record<string, unknown> = {}
+    if (q.from !== undefined) options.from = q.from
+    if (q.to !== undefined) options.to = q.to
+    if (q.limit !== undefined) options.limit = q.limit
+    if (q.bucketSeconds !== undefined) options.bucketSeconds = q.bucketSeconds
+    if (q.maxDataPoints !== undefined) options.maxDataPoints = q.maxDataPoints
+    if (q.aggregate !== undefined) options.aggregate = q.aggregate
+    if (q.percentiles !== undefined) options.percentiles = q.percentiles
+    if (q.force !== undefined) options.force = q.force
+    return Object.keys(options).length > 0 ? [q.name, options] : [q.name]
+  }),
+  get('schedules', 'getSchedules', getSchedulesResponseSchema, schedulesQuerySchema, (q) => {
+    const options = listOptions(q, afterPair(q.afterName, q.afterKey, 'key'))
+    if (q.name && q.key) return [q.name, q.key, ...options]
+    if (q.name) return options.length ? [q.name, undefined, ...options] : [q.name]
+    return options.length ? [undefined, undefined, ...options] : []
+  }),
+  get('schedules', 'getSchedule', getScheduleResponseSchema, scheduleQuerySchema, (q) => (q.key !== undefined ? [q.name, q.key] : [q.name])),
+  get('schedules', 'previewSchedule', previewScheduleResponseSchema, previewScheduleQuerySchema, (q) => {
+    const options: Record<string, unknown> = {}
+    if (q.tz !== undefined) options.tz = q.tz
+    if (q.from !== undefined) options.from = q.from
+    if (q.count !== undefined) options.count = q.count
+    return Object.keys(options).length > 0 ? [q.cron, options] : [q.cron]
+  }),
+  get('jobs', 'getDependencies', getDependenciesResponseSchema, dependencyQuerySchema, (q) => [q.name, q.id, ...listOptions(q, afterPair(q.afterName, q.afterId, 'id'))]),
+  get('jobs', 'getDependents', getDependentsResponseSchema, dependencyQuerySchema, (q) => [q.name, q.id, ...listOptions(q, afterPair(q.afterName, q.afterId, 'id'))]),
+  get('jobs', 'findJobs', findJobsResponseSchema, findJobsQuerySchema, (q) => {
+    const args: unknown[] = [q.name]
+    const options: Record<string, unknown> = {}
+    if (q.id) options.id = q.id
+    if (q.key) options.key = q.key
+    if (q.queued !== undefined) options.queued = q.queued
+    if (q.dataKey) options.data = { [q.dataKey as string]: q.dataValue ?? null }
+    if (q.limit !== undefined) options.limit = q.limit
+    if (q.after !== undefined) options.after = q.after
+    if (Object.keys(options).length > 0) args.push(options)
+    return args
+  })
+]
+
+export const allRoutes: RouteEntry[] = [...postMethods, ...getMethods]
+
+export const bossMethodNames: string[] = allRoutes.map((entry) => entry.method)
+
+export const bossMethodInfos: { method: string, httpMethod: 'get' | 'post' }[] = allRoutes.map((entry) => ({
+  method: entry.method,
+  httpMethod: entry.httpMethod
+}))

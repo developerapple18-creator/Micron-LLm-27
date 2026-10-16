@@ -1,0 +1,2027 @@
+{
+  "files": 337,
+  "inventory": [
+    {
+      "source": "artifacts/api-server/scripts/apply-report-workspace.ts",
+      "target": "artifacts/api-server/scripts/apply-report-workspace.js",
+      "sha256": "0b6560fcd62b1190fcc62d942db6220617945e4bb500f9f57da3cb1b6c1df87e",
+      "lines": 14
+    },
+    {
+      "source": "artifacts/api-server/scripts/development-analysis-fixture.ts",
+      "target": "artifacts/api-server/scripts/development-analysis-fixture.js",
+      "sha256": "e6cfa63a9c74ea869ee0c8bc551799fa58f87dba4f2b48080afc13de2d9dcc07",
+      "lines": 80
+    },
+    {
+      "source": "artifacts/api-server/scripts/phase7c-candidates.ts",
+      "target": "artifacts/api-server/scripts/phase7c-candidates.js",
+      "sha256": "b3be809091a01cba8dee8ce1332e1c6febd680066f743abc5219fcbdcf62b30e",
+      "lines": 32
+    },
+    {
+      "source": "artifacts/api-server/scripts/phase7c-fixtures.ts",
+      "target": "artifacts/api-server/scripts/phase7c-fixtures.js",
+      "sha256": "3319b7a36c46b307200d3e30f616c67c8a547831540f92ed6fe0f27fc4a77d9c",
+      "lines": 30
+    },
+    {
+      "source": "artifacts/api-server/scripts/phase7c-simulated-stream.ts",
+      "target": "artifacts/api-server/scripts/phase7c-simulated-stream.js",
+      "sha256": "2e18a3aacc3f7b5717efa61ec7f252e5fd22ce2871a94c65dcc4578e487816ab",
+      "lines": 34
+    },
+    {
+      "source": "artifacts/api-server/scripts/report-polish-fixture.ts",
+      "target": "artifacts/api-server/scripts/report-polish-fixture.js",
+      "sha256": "6d1838386a752c609bed4569ac4972878e63f1acaf09c1c1d351c6200319800b",
+      "lines": 51
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-account-budget.ts",
+      "target": "artifacts/api-server/scripts/verify-account-budget.js",
+      "sha256": "25e362ae075b37ca988267bf4132b1b6acf1e859d3aaba213aa63be2ecc947cf",
+      "lines": 231
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-admin-records.ts",
+      "target": "artifacts/api-server/scripts/verify-admin-records.js",
+      "sha256": "c704ab97d7d820cf038017925750db616c2caae853b0cb05cd8841afb2c076d6",
+      "lines": 95
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-analysis-lifecycle.ts",
+      "target": "artifacts/api-server/scripts/verify-analysis-lifecycle.js",
+      "sha256": "0c441f7982c1a4cbdadb7a07fbc6b2f99e6d20b646b1b6ab8bd34e7189f4810c",
+      "lines": 159
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-attachment-removal.ts",
+      "target": "artifacts/api-server/scripts/verify-attachment-removal.js",
+      "sha256": "3e2e6461e4c10a8c584d254d415e8eaf239902b324526095c22ae5c20626889f",
+      "lines": 137
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-lawyer-runtime.ts",
+      "target": "artifacts/api-server/scripts/verify-lawyer-runtime.js",
+      "sha256": "fba0254f1fccb77395ab5e82b33d6fcb2dc4313d93f90d1f6152a644d584a15a",
+      "lines": 232
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-multi-pdf.ts",
+      "target": "artifacts/api-server/scripts/verify-multi-pdf.js",
+      "sha256": "f8e62b7b87cde144c281a73c68bbe764de84159a06eedd9523220b5d0f393031",
+      "lines": 428
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-phase7a.ts",
+      "target": "artifacts/api-server/scripts/verify-phase7a.js",
+      "sha256": "d8b2742a1e039a7d313ad1de1177ccd8a03bda185ed6c16213484327aabc546e",
+      "lines": 190
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-phase7c.ts",
+      "target": "artifacts/api-server/scripts/verify-phase7c.js",
+      "sha256": "899d7668a082677cd26616045bb67a75bb7d234e1afc428116a216d98216ac65",
+      "lines": 268
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-phase7d-safeguards.ts",
+      "target": "artifacts/api-server/scripts/verify-phase7d-safeguards.js",
+      "sha256": "5d09231fec2246fec9ac476c2cbe359c46867819ab11e03ee22866137861024f",
+      "lines": 227
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-phase7d.ts",
+      "target": "artifacts/api-server/scripts/verify-phase7d.js",
+      "sha256": "c2b605d7395c8db53c8bf05efa2c6441a2a97d42500074152b6b7bddf0bcaaad",
+      "lines": 208
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-phase8a.ts",
+      "target": "artifacts/api-server/scripts/verify-phase8a.js",
+      "sha256": "e4d9144e7cc0cf46cfc60cd16f6fdabde7233f111813acd14567edbb523ee02c",
+      "lines": 323
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-report-status.ts",
+      "target": "artifacts/api-server/scripts/verify-report-status.js",
+      "sha256": "05ceed5fef65d0effb33e096ff9e5e83cef57baecc25c8d27c7abab09e194f6c",
+      "lines": 109
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-report-workspace.ts",
+      "target": "artifacts/api-server/scripts/verify-report-workspace.js",
+      "sha256": "b75fb56373a88b1eec34bcb9ca0a587cdf9f3ffff00145c0f8a559055cfa80a2",
+      "lines": 332
+    },
+    {
+      "source": "artifacts/api-server/scripts/verify-single-send.ts",
+      "target": "artifacts/api-server/scripts/verify-single-send.js",
+      "sha256": "34b5b140ce8db441139fa9fa7ebdb6771bc5066322cd734d8a111a38195e3854",
+      "lines": 191
+    },
+    {
+      "source": "artifacts/api-server/src/app.ts",
+      "target": "artifacts/api-server/src/app.js",
+      "sha256": "3898dacd409535dc0c43694a6097033de9e66b4c267bcc8d72ed63804c7c6821",
+      "lines": 47
+    },
+    {
+      "source": "artifacts/api-server/src/index.ts",
+      "target": "artifacts/api-server/src/index.js",
+      "sha256": "6fd7f522c833ef6711fb4a6403bba4fc07dad85344b3621a3b81d046174c8017",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-account-budget.ts",
+      "target": "artifacts/api-server/src/lib/analysis-account-budget.js",
+      "sha256": "5b7e28ff22cadfd69c7afc9429a0944b102e3d322b0e36043b08203f8c482ca3",
+      "lines": 98
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-continuation.ts",
+      "target": "artifacts/api-server/src/lib/analysis-continuation.js",
+      "sha256": "7c75a57202b1c4afa3bc0b5987e47d5e4bba2c9b4c0e3e8590012fb4af8fda83",
+      "lines": 71
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-contract.ts",
+      "target": "artifacts/api-server/src/lib/analysis-contract.js",
+      "sha256": "9b559085e55ac5fa7a887917624dd474df0da103148e51ca9851ad646b556f73",
+      "lines": 52
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-execution.ts",
+      "target": "artifacts/api-server/src/lib/analysis-execution.js",
+      "sha256": "c58499de10e4a7c40a25d39f38237963a1535396118b5f021fc3e46aa1c136d4",
+      "lines": 157
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-lifecycle.ts",
+      "target": "artifacts/api-server/src/lib/analysis-lifecycle.js",
+      "sha256": "869dbf1bacd64cb8adb5469e534227a42ec12dc9766577e2f63464524ae11291",
+      "lines": 172
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-pdf.ts",
+      "target": "artifacts/api-server/src/lib/analysis-pdf.js",
+      "sha256": "6bdeab9a4b3aff03cadc3ff00a607e76775803767e9ba169ca5368fa1d86a365",
+      "lines": 166
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-provider.ts",
+      "target": "artifacts/api-server/src/lib/analysis-provider.js",
+      "sha256": "e8995a99744f218dbbd1d81a706e3002da578b962e1351e73092c794a0e34a6e",
+      "lines": 146
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-spending.ts",
+      "target": "artifacts/api-server/src/lib/analysis-spending.js",
+      "sha256": "3043722b66be168925f67c40821fc828eb15709f324f477b525ac9405383191c",
+      "lines": 81
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-stream.ts",
+      "target": "artifacts/api-server/src/lib/analysis-stream.js",
+      "sha256": "ae32caefb42171fb3378d0bd65ba0730c246aedf5cc8266dc5c85616c6b1d36a",
+      "lines": 154
+    },
+    {
+      "source": "artifacts/api-server/src/lib/analysis-submission.ts",
+      "target": "artifacts/api-server/src/lib/analysis-submission.js",
+      "sha256": "1b4a636b15d32cbd574659d598e2ab10e75c4a512181d0c43f45a21161237a22",
+      "lines": 89
+    },
+    {
+      "source": "artifacts/api-server/src/lib/attachment-policy.ts",
+      "target": "artifacts/api-server/src/lib/attachment-policy.js",
+      "sha256": "9f6a08369d5252282c53f23feb6d875fbb6256a2d67e7a0e00ecb90a15e1ec2f",
+      "lines": 44
+    },
+    {
+      "source": "artifacts/api-server/src/lib/attachment-preparation.ts",
+      "target": "artifacts/api-server/src/lib/attachment-preparation.js",
+      "sha256": "b9424c2d24b151f484ced163acead0c62edb1519339b39fb9bfc675984c719fd",
+      "lines": 43
+    },
+    {
+      "source": "artifacts/api-server/src/lib/attachment-removal.ts",
+      "target": "artifacts/api-server/src/lib/attachment-removal.js",
+      "sha256": "1a725a0542f4187b3aa7c14b62ff87966c6ce5f48c973412d4b62c3a918454e2",
+      "lines": 51
+    },
+    {
+      "source": "artifacts/api-server/src/lib/case-access.ts",
+      "target": "artifacts/api-server/src/lib/case-access.js",
+      "sha256": "f383407e0f250b56d79bf7368c91cdfe6e8abc6af58775119fcd91c50a616ed5",
+      "lines": 49
+    },
+    {
+      "source": "artifacts/api-server/src/lib/case-fees.ts",
+      "target": "artifacts/api-server/src/lib/case-fees.js",
+      "sha256": "5986a13ff48f87327d4f32a9d543202d7deea10131cad3929464565dd41880c8",
+      "lines": 75
+    },
+    {
+      "source": "artifacts/api-server/src/lib/case-message.ts",
+      "target": "artifacts/api-server/src/lib/case-message.js",
+      "sha256": "647a51278d5a3b0b13b306101fadb984acdc012c9f7b9873214cae34999f6bf7",
+      "lines": 45
+    },
+    {
+      "source": "artifacts/api-server/src/lib/case-organization.ts",
+      "target": "artifacts/api-server/src/lib/case-organization.js",
+      "sha256": "d36eb82bc8fecc653ac3df403b7e559fa042fbe6e6dbc71e91ccbc0db03c2f8f",
+      "lines": 58
+    },
+    {
+      "source": "artifacts/api-server/src/lib/document-execution.ts",
+      "target": "artifacts/api-server/src/lib/document-execution.js",
+      "sha256": "f1f9d0586e24c1fdde949e34e58709c42962f5249cdbd09127402d9a92bf11e0",
+      "lines": 118
+    },
+    {
+      "source": "artifacts/api-server/src/lib/document-processing.ts",
+      "target": "artifacts/api-server/src/lib/document-processing.js",
+      "sha256": "00ea4f273c05c0dc8a8acfa9cc1036c38651a611976469c7cfd9fafef0a6d2e2",
+      "lines": 319
+    },
+    {
+      "source": "artifacts/api-server/src/lib/document-resources.ts",
+      "target": "artifacts/api-server/src/lib/document-resources.js",
+      "sha256": "6b1617ffa1b98234cffcd70601cbea0836a1273aced9481c92ced70f826c071b",
+      "lines": 93
+    },
+    {
+      "source": "artifacts/api-server/src/lib/lawyer-clients.ts",
+      "target": "artifacts/api-server/src/lib/lawyer-clients.js",
+      "sha256": "45fb01aaf2203a4d58bf2695eab5f00866ed9fd9815c913507318d36f05bad7d",
+      "lines": 50
+    },
+    {
+      "source": "artifacts/api-server/src/lib/logger.ts",
+      "target": "artifacts/api-server/src/lib/logger.js",
+      "sha256": "29e1ca75036fe917595a3a74fd450857d845836fe0625c30b9caa02df4acba62",
+      "lines": 21
+    },
+    {
+      "source": "artifacts/api-server/src/lib/mobile-verification.ts",
+      "target": "artifacts/api-server/src/lib/mobile-verification.js",
+      "sha256": "689443545c8b2215a82e6c075d754945490d8c082e3a2aa50320fd782b75afd1",
+      "lines": 70
+    },
+    {
+      "source": "artifacts/api-server/src/lib/private-files.ts",
+      "target": "artifacts/api-server/src/lib/private-files.js",
+      "sha256": "3fd31baabce766c52361a4d10323e5efaaedaf9249b543e9d3521f52add8ad55",
+      "lines": 57
+    },
+    {
+      "source": "artifacts/api-server/src/lib/report-conversation.ts",
+      "target": "artifacts/api-server/src/lib/report-conversation.js",
+      "sha256": "b3f434ecd977ccbc92d7d52fb12b92e5081987a795b66213e499262a1c5d70d0",
+      "lines": 60
+    },
+    {
+      "source": "artifacts/api-server/src/lib/report-export.ts",
+      "target": "artifacts/api-server/src/lib/report-export.js",
+      "sha256": "f88da43bd853b4f527fe998e0333df0fc74901c40c8a5fe88c3241e60b9fe547",
+      "lines": 74
+    },
+    {
+      "source": "artifacts/api-server/src/lib/report-interactions.ts",
+      "target": "artifacts/api-server/src/lib/report-interactions.js",
+      "sha256": "e9ec3c1d262c359a160b0cd48c6e91324577499da8ba6e400248662f63c6945f",
+      "lines": 126
+    },
+    {
+      "source": "artifacts/api-server/src/lib/report-versions.ts",
+      "target": "artifacts/api-server/src/lib/report-versions.js",
+      "sha256": "ca073dcd7831f86607492d83d1d6e8259dd6404c4e3cf6dd32747c9a600749c9",
+      "lines": 95
+    },
+    {
+      "source": "artifacts/api-server/src/lib/report-workspace-schema.ts",
+      "target": "artifacts/api-server/src/lib/report-workspace-schema.js",
+      "sha256": "837e339c5ddae7161f0bcc295da447baf6facb97c12d333181ca8cb1b38543c6",
+      "lines": 9
+    },
+    {
+      "source": "artifacts/api-server/src/lib/security.ts",
+      "target": "artifacts/api-server/src/lib/security.js",
+      "sha256": "fdcdb4c73b79f39cdf6b9751ccba0c0f5ea70151f1fd5f130ce9952d69003afb",
+      "lines": 133
+    },
+    {
+      "source": "artifacts/api-server/src/lib/taqnyat-sms.ts",
+      "target": "artifacts/api-server/src/lib/taqnyat-sms.js",
+      "sha256": "4d223a46ab274da86b454ce009c22aa49c3753f2035d3280b2bd7cddc4201161",
+      "lines": 75
+    },
+    {
+      "source": "artifacts/api-server/src/routes/admin-records.ts",
+      "target": "artifacts/api-server/src/routes/admin-records.js",
+      "sha256": "989108221a91054bcaeb9f887daf2b4ace05cfdff235c26754cbb53d47c063e6",
+      "lines": 68
+    },
+    {
+      "source": "artifacts/api-server/src/routes/analysis.ts",
+      "target": "artifacts/api-server/src/routes/analysis.js",
+      "sha256": "47ae7be469d4b2cede6778731dc3e355634e6278cd7b145fbc640070ef82c6b0",
+      "lines": 34
+    },
+    {
+      "source": "artifacts/api-server/src/routes/attachments.ts",
+      "target": "artifacts/api-server/src/routes/attachments.js",
+      "sha256": "28df4b447d8058e529c3143fa9d2dbfd75d72a4b902327daba5c295a01d82e16",
+      "lines": 109
+    },
+    {
+      "source": "artifacts/api-server/src/routes/auth.ts",
+      "target": "artifacts/api-server/src/routes/auth.js",
+      "sha256": "255524ea5e62453fae541a8329f3e150c006c61be3dcd30d707ddf30671e47c9",
+      "lines": 106
+    },
+    {
+      "source": "artifacts/api-server/src/routes/cases.ts",
+      "target": "artifacts/api-server/src/routes/cases.js",
+      "sha256": "6703f04ab891f57002931b800a4ac6bfd66030d3f9a48025732262e6dacb3b74",
+      "lines": 60
+    },
+    {
+      "source": "artifacts/api-server/src/routes/health.ts",
+      "target": "artifacts/api-server/src/routes/health.js",
+      "sha256": "0386ceddb4ff4bff220af72ca38a62191ad95a2f41fd619df3bb9ceffce03db2",
+      "lines": 12
+    },
+    {
+      "source": "artifacts/api-server/src/routes/index.ts",
+      "target": "artifacts/api-server/src/routes/index.js",
+      "sha256": "8ef795be7ee96739b118560f945e27f45d324d558c19b69805ed19f800594c37",
+      "lines": 25
+    },
+    {
+      "source": "artifacts/api-server/src/routes/lawyer-management.ts",
+      "target": "artifacts/api-server/src/routes/lawyer-management.js",
+      "sha256": "d5b47b1d58b754a549ddfacc18a828e244452bb925a784514d1d2431fa43afa5",
+      "lines": 36
+    },
+    {
+      "source": "artifacts/api-server/src/routes/legal.ts",
+      "target": "artifacts/api-server/src/routes/legal.js",
+      "sha256": "fb4d9f46826e8510c2e5699e3d345eccac9d922cb5081717842672e0629fe1ec",
+      "lines": 63
+    },
+    {
+      "source": "artifacts/api-server/src/routes/password-reset.ts",
+      "target": "artifacts/api-server/src/routes/password-reset.js",
+      "sha256": "e493275e2948b7b9363f475396f5ddb4d81479866d354c922fa7c3cdbcb06b28",
+      "lines": 59
+    },
+    {
+      "source": "artifacts/api-server/src/routes/report-workspace.ts",
+      "target": "artifacts/api-server/src/routes/report-workspace.js",
+      "sha256": "6b8f45544d96081609c9d786561c3b81cf523c4d9c15161f8e9e823333ce5036",
+      "lines": 60
+    },
+    {
+      "source": "artifacts/api-server/tests/auth-fixture.ts",
+      "target": "artifacts/api-server/tests/auth-fixture.js",
+      "sha256": "b203bb8f307d7817967adaeb3502c2dde2b7fd1a5a1e3c87b680d2ddbe506ce3",
+      "lines": 91
+    },
+    {
+      "source": "artifacts/api-server/tests/document-processing.test.ts",
+      "target": "artifacts/api-server/tests/document-processing.test.js",
+      "sha256": "5292791f25258e6e2c3364dc89cd8138cac001f2715da5f6baea45a025b38064",
+      "lines": 187
+    },
+    {
+      "source": "artifacts/api-server/tests/document-resource-db.ts",
+      "target": "artifacts/api-server/tests/document-resource-db.js",
+      "sha256": "4e6cfc29161806484446ef0b8fdd415508eb26b1ee620c5208b86c79742e475f",
+      "lines": 83
+    },
+    {
+      "source": "artifacts/api-server/tests/document-resources.test.ts",
+      "target": "artifacts/api-server/tests/document-resources.test.js",
+      "sha256": "4e29ff1f1b65f4bfa9a4b49e9a9eaca3a659538e081900f3f8289bd0ff2b9d27",
+      "lines": 198
+    },
+    {
+      "source": "artifacts/api-server/tests/document-test-db.ts",
+      "target": "artifacts/api-server/tests/document-test-db.js",
+      "sha256": "eea02800c54cc4ceecbc95abf718124909d3edce4a99123ec1fb27d26ad0bc92",
+      "lines": 7
+    },
+    {
+      "source": "artifacts/api-server/tests/word-visual-fixture.ts",
+      "target": "artifacts/api-server/tests/word-visual-fixture.js",
+      "sha256": "88504e91316f817be924fc83ee8237dc31706b96e37a2450e99b6022672b9e2b",
+      "lines": 111
+    },
+    {
+      "source": "artifacts/api-server/tests/workflow-fixture-db.ts",
+      "target": "artifacts/api-server/tests/workflow-fixture-db.js",
+      "sha256": "76a2e9fe0b23a220ee8be4ef8bb7a9622d5237b57781131484955c3191b2bb0a",
+      "lines": 35
+    },
+    {
+      "source": "artifacts/api-server/tests/workflow-fixture-security.ts",
+      "target": "artifacts/api-server/tests/workflow-fixture-security.js",
+      "sha256": "ce77228c7edec6db906caac099893071aa8cedb0d644a2704be733060abebf4a",
+      "lines": 10
+    },
+    {
+      "source": "artifacts/api-server/tests/workflow-fixture-storage.ts",
+      "target": "artifacts/api-server/tests/workflow-fixture-storage.js",
+      "sha256": "f35112d0e7e1db1e3ac4e81be8b67f19ddcf614d8d3a8b1ec586ec85ec67f72e",
+      "lines": 39
+    },
+    {
+      "source": "artifacts/api-server/tests/workflow-fixture.ts",
+      "target": "artifacts/api-server/tests/workflow-fixture.js",
+      "sha256": "27b7a985ed0e911a6f5ca8c75a8892a428e0968c846e243141b7e3d1876887bc",
+      "lines": 110
+    },
+    {
+      "source": "artifacts/micron-law/src/App.tsx",
+      "target": "artifacts/micron-law/src/App.jsx",
+      "sha256": "e2946aee6e345758a163054a44051cbcff23cc2aa08d04917bc55056263fc68c",
+      "lines": 60
+    },
+    {
+      "source": "artifacts/micron-law/src/components/admin-records/audit-panel.tsx",
+      "target": "artifacts/micron-law/src/components/admin-records/audit-panel.jsx",
+      "sha256": "8de94c6e3b646126ff2624129a2616f4fe1625148433fb9127c2430b461be263",
+      "lines": 47
+    },
+    {
+      "source": "artifacts/micron-law/src/components/admin-records/historical-doc.tsx",
+      "target": "artifacts/micron-law/src/components/admin-records/historical-doc.jsx",
+      "sha256": "9680cbed66dfdd9197d93e28839deb77725b16e560ad3da364bd523385de31c4",
+      "lines": 27
+    },
+    {
+      "source": "artifacts/micron-law/src/components/admin-records/lawyer-acceptances.tsx",
+      "target": "artifacts/micron-law/src/components/admin-records/lawyer-acceptances.jsx",
+      "sha256": "c737ba0cd554fc6bbfcfa06f9d7d664d7717d692623244abc1fee372d3d4317f",
+      "lines": 57
+    },
+    {
+      "source": "artifacts/micron-law/src/components/admin-records/lawyers-panel.tsx",
+      "target": "artifacts/micron-law/src/components/admin-records/lawyers-panel.jsx",
+      "sha256": "b3ffa89c5f53e79982b0e824441bf73e9399ac8f5e11f4cc5734526c098b7558",
+      "lines": 49
+    },
+    {
+      "source": "artifacts/micron-law/src/components/admin-records/shared.tsx",
+      "target": "artifacts/micron-law/src/components/admin-records/shared.jsx",
+      "sha256": "f8ad197d04a7652404e6b605250d11f66a0a5866dc4b14c7f3b446a4576444b3",
+      "lines": 84
+    },
+    {
+      "source": "artifacts/micron-law/src/components/analysis-prototype.tsx",
+      "target": "artifacts/micron-law/src/components/analysis-prototype.jsx",
+      "sha256": "f46c04f09170046a36070d0aa1b516c8c1e0de86283b3a27051e6beb754abe31",
+      "lines": 457
+    },
+    {
+      "source": "artifacts/micron-law/src/components/analysis-verification.tsx",
+      "target": "artifacts/micron-law/src/components/analysis-verification.jsx",
+      "sha256": "1ea349b8eb670ba9c9a50f5ee377489940ac508846b31d23d5c7d673c3becc3a",
+      "lines": 61
+    },
+    {
+      "source": "artifacts/micron-law/src/components/archive-panel.tsx",
+      "target": "artifacts/micron-law/src/components/archive-panel.jsx",
+      "sha256": "1e7fdb3cf60834c3e4f13e5ef6143d3e6934ea34c1087b9c7430bd7d35bcd03a",
+      "lines": 70
+    },
+    {
+      "source": "artifacts/micron-law/src/components/case-conversation.tsx",
+      "target": "artifacts/micron-law/src/components/case-conversation.jsx",
+      "sha256": "3dde6a508a08cb26a0168fab8f8ab180244e010e0c04b6ce71ad7018e49cda34",
+      "lines": 128
+    },
+    {
+      "source": "artifacts/micron-law/src/components/case-manage-dialog.tsx",
+      "target": "artifacts/micron-law/src/components/case-manage-dialog.jsx",
+      "sha256": "5a9f088bff2ac783e66a8d177d7d0209d708e944313e1d49b671c2534f6f366f",
+      "lines": 237
+    },
+    {
+      "source": "artifacts/micron-law/src/components/case-organizer.tsx",
+      "target": "artifacts/micron-law/src/components/case-organizer.jsx",
+      "sha256": "b3f8ae9a7554dc9c53db81fe7e9b74baed6ebe40222aa74295800e7558847529",
+      "lines": 266
+    },
+    {
+      "source": "artifacts/micron-law/src/components/case-view.tsx",
+      "target": "artifacts/micron-law/src/components/case-view.jsx",
+      "sha256": "14522014745d13fa833e68d259ff504b668c664371586a0705043da6f3fd02c9",
+      "lines": 444
+    },
+    {
+      "source": "artifacts/micron-law/src/components/chat-composer.tsx",
+      "target": "artifacts/micron-law/src/components/chat-composer.jsx",
+      "sha256": "a87886294d8d8a6fecd47dcce7cd40daa54b4dafdeb5e8890f781dd8830871ab",
+      "lines": 81
+    },
+    {
+      "source": "artifacts/micron-law/src/components/client-form.tsx",
+      "target": "artifacts/micron-law/src/components/client-form.jsx",
+      "sha256": "2343d84853fcb59a70db7e436970284cb940b653ed807a40fe57ae65da86a2e5",
+      "lines": 85
+    },
+    {
+      "source": "artifacts/micron-law/src/components/clients-panel.tsx",
+      "target": "artifacts/micron-law/src/components/clients-panel.jsx",
+      "sha256": "6a6aaf3e746688f93c0116c07f8e04ae4b21e4106e341d5a908d1617c5d7081a",
+      "lines": 178
+    },
+    {
+      "source": "artifacts/micron-law/src/components/composer-actions.tsx",
+      "target": "artifacts/micron-law/src/components/composer-actions.jsx",
+      "sha256": "5a03f902e8893cc628d0c3a59c97be63e55e1da25c467fc2a99228083f91c3af",
+      "lines": 40
+    },
+    {
+      "source": "artifacts/micron-law/src/components/doc-reader.tsx",
+      "target": "artifacts/micron-law/src/components/doc-reader.jsx",
+      "sha256": "61b1aebd4f67ce38203dbb461ed2de4b44a01a5943b29d535fcf8da0147dba1d",
+      "lines": 34
+    },
+    {
+      "source": "artifacts/micron-law/src/components/error-boundary.tsx",
+      "target": "artifacts/micron-law/src/components/error-boundary.jsx",
+      "sha256": "c1ea4d88be8cd206a46bd87f19edf025b2504a70a2b65cd9c438e4a0e62dafe0",
+      "lines": 107
+    },
+    {
+      "source": "artifacts/micron-law/src/components/guided-clarification.tsx",
+      "target": "artifacts/micron-law/src/components/guided-clarification.jsx",
+      "sha256": "d1c7a7b24c33ac053b2884fd9d9ed245e48cb652f70ecaea6f50c97df6e8af8e",
+      "lines": 67
+    },
+    {
+      "source": "artifacts/micron-law/src/components/home-pinned.tsx",
+      "target": "artifacts/micron-law/src/components/home-pinned.jsx",
+      "sha256": "1adfb3715c3b30b46a50c4ed613d8abc65834ad55f8e4ebdb2ed49c0c65ee9a2",
+      "lines": 174
+    },
+    {
+      "source": "artifacts/micron-law/src/components/interactive-report.tsx",
+      "target": "artifacts/micron-law/src/components/interactive-report.jsx",
+      "sha256": "e1adf34f2dbc51eba7447faf74b32c06b5a2726b8078414fd6d9d1d5f7fdb1da",
+      "lines": 474
+    },
+    {
+      "source": "artifacts/micron-law/src/components/kit.tsx",
+      "target": "artifacts/micron-law/src/components/kit.jsx",
+      "sha256": "891e605f20bcd460bdd9faa31653d966cb1a5321a54f3152c504e9e6abd51032",
+      "lines": 77
+    },
+    {
+      "source": "artifacts/micron-law/src/components/otp-code.tsx",
+      "target": "artifacts/micron-law/src/components/otp-code.jsx",
+      "sha256": "9f73c33de797593fa61f009e3d48f7b732f363b712f1747a829cb5761550e9ab",
+      "lines": 92
+    },
+    {
+      "source": "artifacts/micron-law/src/components/paragraph-interaction.tsx",
+      "target": "artifacts/micron-law/src/components/paragraph-interaction.jsx",
+      "sha256": "b8a81e3b64ca9dcf41c2c54ef282d7801acf007b6275ae92d172d1f41b1a0e8c",
+      "lines": 145
+    },
+    {
+      "source": "artifacts/micron-law/src/components/real-analysis.tsx",
+      "target": "artifacts/micron-law/src/components/real-analysis.jsx",
+      "sha256": "b320e300aaad693ae1a3873fb2a709def5a492e40500da4bde1d2c3efae0007a",
+      "lines": 320
+    },
+    {
+      "source": "artifacts/micron-law/src/components/report-draft-guard.tsx",
+      "target": "artifacts/micron-law/src/components/report-draft-guard.jsx",
+      "sha256": "a824e4539b0a03dd8185f796c0cf945ebccab2dd533c90c4cbd133857a3d65a1",
+      "lines": 21
+    },
+    {
+      "source": "artifacts/micron-law/src/components/report-question-answer.tsx",
+      "target": "artifacts/micron-law/src/components/report-question-answer.jsx",
+      "sha256": "c6ef5fca12dadf40e03f111537069803c4c5d6580ee4585c6241b2807e02c363",
+      "lines": 25
+    },
+    {
+      "source": "artifacts/micron-law/src/components/theme.tsx",
+      "target": "artifacts/micron-law/src/components/theme.jsx",
+      "sha256": "2895806193ee05a703ed56df06303a52d26a91cb7a9ae7144c41652ec6cc0e0f",
+      "lines": 33
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/accordion.tsx",
+      "target": "artifacts/micron-law/src/components/ui/accordion.jsx",
+      "sha256": "8e4230a3e6d38bfab7b02f00f9e948c8c4038432c5b1bf2d0ea44dc8b5ce09cc",
+      "lines": 55
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/alert-dialog.tsx",
+      "target": "artifacts/micron-law/src/components/ui/alert-dialog.jsx",
+      "sha256": "d76901a06e6881e94aa3847fde2602ee6f6ddc9f4cace9fa238627a5572bd24e",
+      "lines": 139
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/alert.tsx",
+      "target": "artifacts/micron-law/src/components/ui/alert.jsx",
+      "sha256": "695369ea4d1ba4438dcedacaa8059b08b6463ac93170360f3bd42b983b7608e9",
+      "lines": 59
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/aspect-ratio.tsx",
+      "target": "artifacts/micron-law/src/components/ui/aspect-ratio.jsx",
+      "sha256": "2f5b0ed3cbcf84e526caad0c6b88d4457f8745a365c86cc74d924a1b6e013a36",
+      "lines": 6
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/avatar.tsx",
+      "target": "artifacts/micron-law/src/components/ui/avatar.jsx",
+      "sha256": "429f5e82fc3dcf265625650176f16ff9b35e55826183e1f1b2d4dc2a338f9b15",
+      "lines": 50
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/badge.tsx",
+      "target": "artifacts/micron-law/src/components/ui/badge.jsx",
+      "sha256": "df1293ec9ee4a9090440ccde798d1f7f4f598fceb97d451f244b04a85b7e55ed",
+      "lines": 43
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/breadcrumb.tsx",
+      "target": "artifacts/micron-law/src/components/ui/breadcrumb.jsx",
+      "sha256": "44b4de47f806eec0e3de5130f0399e83700eaf0bc8deb47af5ffda2bb11eb3f1",
+      "lines": 115
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/button-group.tsx",
+      "target": "artifacts/micron-law/src/components/ui/button-group.jsx",
+      "sha256": "b89025c11d08652597cb46b097d3e04658ad2c383bf81ed445c8182c0ed1b260",
+      "lines": 83
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/button.tsx",
+      "target": "artifacts/micron-law/src/components/ui/button.jsx",
+      "sha256": "1c0ff2308b905edc0a6aae60b07c1f664dcdd8cc1352d493f5230cdb10bae2c8",
+      "lines": 65
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/calendar.tsx",
+      "target": "artifacts/micron-law/src/components/ui/calendar.jsx",
+      "sha256": "1cdd1e62797356fe62f61f5521fcf0da8e3570b1120868ccca2b48370157fe46",
+      "lines": 213
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/card.tsx",
+      "target": "artifacts/micron-law/src/components/ui/card.jsx",
+      "sha256": "9fed39a53303c12fa6ac6f5f8813c1683e2198df9ee067cffbdfe69044cf3e4f",
+      "lines": 83
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/carousel.tsx",
+      "target": "artifacts/micron-law/src/components/ui/carousel.jsx",
+      "sha256": "4ae2f69bc2c1ce33c60b23ddc5382f4b93882dac07c2d18cce32fb148ff52c48",
+      "lines": 260
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/chart.tsx",
+      "target": "artifacts/micron-law/src/components/ui/chart.jsx",
+      "sha256": "ac747c83483d742e207426a193ba5e2cf639fa18cd819c1f12d12329520c6c12",
+      "lines": 367
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/checkbox.tsx",
+      "target": "artifacts/micron-law/src/components/ui/checkbox.jsx",
+      "sha256": "6b9e336fa42475bbb2ad4d76478afb8d2555e6e26bac245b9ccde62a9a033adc",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/collapsible.tsx",
+      "target": "artifacts/micron-law/src/components/ui/collapsible.jsx",
+      "sha256": "aedcd10b62404b39d8d5544c01fee90aa7b66e7280bb80a215601ad198a1b8fd",
+      "lines": 12
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/command.tsx",
+      "target": "artifacts/micron-law/src/components/ui/command.jsx",
+      "sha256": "d8fb66e44f9f8de558f6a94c781f3d890871d76dbabcda64e6fab3c917b3237d",
+      "lines": 153
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/context-menu.tsx",
+      "target": "artifacts/micron-law/src/components/ui/context-menu.jsx",
+      "sha256": "bdff38b45a6010e3db808c099c799bd61e6aca619378074e7b14b63c1291e4c9",
+      "lines": 198
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/dialog.tsx",
+      "target": "artifacts/micron-law/src/components/ui/dialog.jsx",
+      "sha256": "95bdca766982a4b9338bc7b7503209e372209d2c3cb30808bd2c3480694d49d5",
+      "lines": 120
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/drawer.tsx",
+      "target": "artifacts/micron-law/src/components/ui/drawer.jsx",
+      "sha256": "152bc340ad982e84f851e3bc1a6b8e7ffd0151a7445c6ecf1b1e3e13cbc19210",
+      "lines": 116
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/dropdown-menu.tsx",
+      "target": "artifacts/micron-law/src/components/ui/dropdown-menu.jsx",
+      "sha256": "a79d5419ee174de35880340aef44d67847cee54846c058e02ac4a846b603c60f",
+      "lines": 201
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/empty.tsx",
+      "target": "artifacts/micron-law/src/components/ui/empty.jsx",
+      "sha256": "48824b1b37bd406fa74f48db726a4f1d70cf88db5b3432f7b1d59f584f1c5dad",
+      "lines": 104
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/field.tsx",
+      "target": "artifacts/micron-law/src/components/ui/field.jsx",
+      "sha256": "c3787ffb045354e9f18e70d94890627caea94939a226e49c1e6cedee84a1e9e1",
+      "lines": 244
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/form.tsx",
+      "target": "artifacts/micron-law/src/components/ui/form.jsx",
+      "sha256": "1960463b09152760fdd99ca3eb16187408d064c7599ed66384b42d1613d3a3a3",
+      "lines": 179
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/hover-card.tsx",
+      "target": "artifacts/micron-law/src/components/ui/hover-card.jsx",
+      "sha256": "e0b4e3f0126757a8eb5c6e436c8c041c049430abe9a2eb84b10154144b31c29c",
+      "lines": 27
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/input-group.tsx",
+      "target": "artifacts/micron-law/src/components/ui/input-group.jsx",
+      "sha256": "f4befbf9bf8ebd755b267c4db2b396be296adb95acca5c3fba54f6495bdedebd",
+      "lines": 168
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/input-otp.tsx",
+      "target": "artifacts/micron-law/src/components/ui/input-otp.jsx",
+      "sha256": "b4891335e70920518cfbdef2aeb399f61477fbc4b3ffe3b8a2938f19074164cc",
+      "lines": 69
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/input.tsx",
+      "target": "artifacts/micron-law/src/components/ui/input.jsx",
+      "sha256": "03ac1648171bd5ad90dbc03e9ebff9a9cc77708bcc53bdac914b80eeebfe3032",
+      "lines": 22
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/item.tsx",
+      "target": "artifacts/micron-law/src/components/ui/item.jsx",
+      "sha256": "4a84cda22d692ee176f5128517a4003a63d11f907df445e7586ef034c88e8772",
+      "lines": 193
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/kbd.tsx",
+      "target": "artifacts/micron-law/src/components/ui/kbd.jsx",
+      "sha256": "4348a7a06a715e9e9673602cbb9ed89a6a4c6cbdd457d4c03db0f23a139d19eb",
+      "lines": 29
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/label.tsx",
+      "target": "artifacts/micron-law/src/components/ui/label.jsx",
+      "sha256": "fbc0c7db4221227941271a004bf71db5067aee9d8668f3351d91113cd5934c8c",
+      "lines": 26
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/menubar.tsx",
+      "target": "artifacts/micron-law/src/components/ui/menubar.jsx",
+      "sha256": "26dbbf36e4ffd87aab74e61dd1e3613f0c640988479679d53bacd8dbd15cc891",
+      "lines": 254
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/navigation-menu.tsx",
+      "target": "artifacts/micron-law/src/components/ui/navigation-menu.jsx",
+      "sha256": "222020e1ac703ce01700d6e8822c6263932bc71c481d724b8ef53ccaae8ad63f",
+      "lines": 128
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/pagination.tsx",
+      "target": "artifacts/micron-law/src/components/ui/pagination.jsx",
+      "sha256": "dd65d2e59226a3f384014b596ae701aef50f130cb3061f4657e81c588587b8da",
+      "lines": 117
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/popover.tsx",
+      "target": "artifacts/micron-law/src/components/ui/popover.jsx",
+      "sha256": "dc574442536873c8aa88733c348503c4599ad6ed0fc9898fd25406d94e095cca",
+      "lines": 31
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/progress.tsx",
+      "target": "artifacts/micron-law/src/components/ui/progress.jsx",
+      "sha256": "74223bcccf7ca2ed026d197476abbe3d48fbc531c40f4252445f56954a270c75",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/radio-group.tsx",
+      "target": "artifacts/micron-law/src/components/ui/radio-group.jsx",
+      "sha256": "8155d32dea5d4ddea2048b6d12f83fe4805d9bc87c97b994dbb0d040981334f2",
+      "lines": 42
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/resizable.tsx",
+      "target": "artifacts/micron-law/src/components/ui/resizable.jsx",
+      "sha256": "8e73dfb8b582944364d73b64ed03378016f20f7251f15f880dcf0fb140e1ad41",
+      "lines": 45
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/scroll-area.tsx",
+      "target": "artifacts/micron-law/src/components/ui/scroll-area.jsx",
+      "sha256": "73f5dedda781e5285092ea269f747378dbad8d95631eab638e15b3c31595dc59",
+      "lines": 46
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/select.tsx",
+      "target": "artifacts/micron-law/src/components/ui/select.jsx",
+      "sha256": "c64c9c1574c91f1eff922f3557e7609ba6c1d5e39959dbdecf8d386d7ae41990",
+      "lines": 159
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/separator.tsx",
+      "target": "artifacts/micron-law/src/components/ui/separator.jsx",
+      "sha256": "2b129347f918742bf006099f7f56a9be373250de2ecc3ad201297563e3d1f807",
+      "lines": 29
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/sheet.tsx",
+      "target": "artifacts/micron-law/src/components/ui/sheet.jsx",
+      "sha256": "ef2ae35ccab1252c4eee56e67e9f1b2499b5bbfb3ae39037d8d4be39915c272f",
+      "lines": 140
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/sidebar.tsx",
+      "target": "artifacts/micron-law/src/components/ui/sidebar.jsx",
+      "sha256": "de7566e708ba8bf34cb4a78fc018c784315c9d7a16d70e66255f8c72caf9d1db",
+      "lines": 727
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/skeleton.tsx",
+      "target": "artifacts/micron-law/src/components/ui/skeleton.jsx",
+      "sha256": "d78130b2e311a750e7bb524e66e3af4c04e2ab02b04fd68539c1afd0bbb47152",
+      "lines": 16
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/slider.tsx",
+      "target": "artifacts/micron-law/src/components/ui/slider.jsx",
+      "sha256": "ecac74b8f3a044ba7a9e4eb0bdbfdf48be92483a32d2c414c5078c9f38e1f369",
+      "lines": 26
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/sonner.tsx",
+      "target": "artifacts/micron-law/src/components/ui/sonner.jsx",
+      "sha256": "de5a5d9ae404545fcb0f21123530ffcf89d24a47812c70b3ca1376591e28dbdd",
+      "lines": 32
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/spinner.tsx",
+      "target": "artifacts/micron-law/src/components/ui/spinner.jsx",
+      "sha256": "4458ea392b32f439cd4c64b9593846f339370fa1295c04f9003f05c1f3386689",
+      "lines": 16
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/switch.tsx",
+      "target": "artifacts/micron-law/src/components/ui/switch.jsx",
+      "sha256": "f81bc9b5ce2d6a92b6b2f1f3376c0489f30f7073081a1d9d6c56553880f44c58",
+      "lines": 27
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/table.tsx",
+      "target": "artifacts/micron-law/src/components/ui/table.jsx",
+      "sha256": "dd29f5ef260af67ed09c84505495e3fddbad14009e3b3ce689d0c354ffaf55d3",
+      "lines": 120
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/tabs.tsx",
+      "target": "artifacts/micron-law/src/components/ui/tabs.jsx",
+      "sha256": "320609101fbaa6cccda0b899154cb510fa322926cfdbaf07e33b79c00c83fcd6",
+      "lines": 53
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/textarea.tsx",
+      "target": "artifacts/micron-law/src/components/ui/textarea.jsx",
+      "sha256": "63fb699771afe60c5073ed50e1a042d7d7f21eefd12d15bcb750cf3230985011",
+      "lines": 22
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/toast.tsx",
+      "target": "artifacts/micron-law/src/components/ui/toast.jsx",
+      "sha256": "04d4ef720079342e2f4380c22683f1544bd8e93a581fb55e447458f04a6127d5",
+      "lines": 127
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/toaster.tsx",
+      "target": "artifacts/micron-law/src/components/ui/toaster.jsx",
+      "sha256": "d34c7cd51482ddd5703a13378d9ac69b3459a304581e42f56ac2c696e53163ac",
+      "lines": 34
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/toggle-group.tsx",
+      "target": "artifacts/micron-law/src/components/ui/toggle-group.jsx",
+      "sha256": "6d7aca86245edf5d0a8f6f3ed73bd19316f4865425891eabccd6f3e37e59519e",
+      "lines": 61
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/toggle.tsx",
+      "target": "artifacts/micron-law/src/components/ui/toggle.jsx",
+      "sha256": "5800d2099224ef90892e8c1d972d2a0964391c33cd43d7f5c6abf5cd42e023e1",
+      "lines": 43
+    },
+    {
+      "source": "artifacts/micron-law/src/components/ui/tooltip.tsx",
+      "target": "artifacts/micron-law/src/components/ui/tooltip.jsx",
+      "sha256": "e3c6ea9d4ecd62881af33564e25be013d35a8a7fa78475a6dcc98a06c7f894eb",
+      "lines": 32
+    },
+    {
+      "source": "artifacts/micron-law/src/hooks/use-case-workspace.ts",
+      "target": "artifacts/micron-law/src/hooks/use-case-workspace.js",
+      "sha256": "cc12508c64a8d16c7affa1ad91228bf8374f731baf9f9ff4c339d93c66fa4180",
+      "lines": 395
+    },
+    {
+      "source": "artifacts/micron-law/src/hooks/use-clarification-draft.ts",
+      "target": "artifacts/micron-law/src/hooks/use-clarification-draft.js",
+      "sha256": "dfedcfbfb7e1e62ba796f79aabbdf901308b2a0f46927e4a5fefceebc0152e21",
+      "lines": 16
+    },
+    {
+      "source": "artifacts/micron-law/src/hooks/use-mobile.tsx",
+      "target": "artifacts/micron-law/src/hooks/use-mobile.jsx",
+      "sha256": "82bff42ff087bd5dc90a5d17609cc428b8688de92d1333073a839af5ad3c9cbd",
+      "lines": 22
+    },
+    {
+      "source": "artifacts/micron-law/src/hooks/use-toast.ts",
+      "target": "artifacts/micron-law/src/hooks/use-toast.js",
+      "sha256": "12cce940e597e1d597f7063131acd19658d25e924904308bf719bde17b67e351",
+      "lines": 188
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/case-drafts.ts",
+      "target": "artifacts/micron-law/src/lib/case-drafts.js",
+      "sha256": "9fadddcae9a4692818aeec62db4639c04ad9d74d50efd16c30b3b5164a38c4c8",
+      "lines": 84
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/clarification-draft.ts",
+      "target": "artifacts/micron-law/src/lib/clarification-draft.js",
+      "sha256": "b50c42b569346f5ddf27ff7b9dd999769d76ea453139eb6acdf2fc01456eca35",
+      "lines": 49
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/composer-action.ts",
+      "target": "artifacts/micron-law/src/lib/composer-action.js",
+      "sha256": "4a678c1d93700f5afd7a6e1a4ba9cd39ae80b505ba37998eee30a789d7e03519",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/document-labels.ts",
+      "target": "artifacts/micron-law/src/lib/document-labels.js",
+      "sha256": "5ff2fb93b56fc0cabf7ba3fb20fe6f7e8b0f525f2884708773b404348d24dfc6",
+      "lines": 14
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/pdf-selection.ts",
+      "target": "artifacts/micron-law/src/lib/pdf-selection.js",
+      "sha256": "49bd60163a827c980397d699b14875e073f8dc7de637d06fa40367f79d4704dd",
+      "lines": 20
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/report-api.ts",
+      "target": "artifacts/micron-law/src/lib/report-api.js",
+      "sha256": "53284e0416c5940ed5e54baea2d9a81a834c180e22400163d43e0ff6af0a7bd4",
+      "lines": 240
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/report-draft-guard.ts",
+      "target": "artifacts/micron-law/src/lib/report-draft-guard.js",
+      "sha256": "53f2f9531d9915eff53c585fc771456b1e0df3f7a9eb71dc3a1f97a46f88bf3c",
+      "lines": 17
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/report-interaction-status.ts",
+      "target": "artifacts/micron-law/src/lib/report-interaction-status.js",
+      "sha256": "f25cd66275b40d869ace8b24aae4780a581de83e5148c0bb8a292ed57d71b4b2",
+      "lines": 22
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/session.ts",
+      "target": "artifacts/micron-law/src/lib/session.js",
+      "sha256": "5298e776982521f2430ca43c674fd9e399d1aece4c6fd3fe859bad147640e22c",
+      "lines": 40
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/use-visual-viewport.ts",
+      "target": "artifacts/micron-law/src/lib/use-visual-viewport.js",
+      "sha256": "63392f220dfd6ac7c91c2fc2e4a28b1bf8b52390f87b79959efbf6e6174ae258",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/utils.ts",
+      "target": "artifacts/micron-law/src/lib/utils.js",
+      "sha256": "afc0e1dc0e142d6b81f688d91087f81a4b2db4240cf70f55b6e5e4dcc199ebf1",
+      "lines": 8
+    },
+    {
+      "source": "artifacts/micron-law/src/lib/workspace-api.ts",
+      "target": "artifacts/micron-law/src/lib/workspace-api.js",
+      "sha256": "4597266957bf47fa6424da8fde89e53417c6968ac2893f8ff6157f9ada762ce9",
+      "lines": 108
+    },
+    {
+      "source": "artifacts/micron-law/src/main.tsx",
+      "target": "artifacts/micron-law/src/main.jsx",
+      "sha256": "e7e03b61f962dc1787ea029d4941424475455366b5a4f079c8fcb4f5df4d076c",
+      "lines": 18
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/admin-login.tsx",
+      "target": "artifacts/micron-law/src/pages/admin-login.jsx",
+      "sha256": "af4cd457056f6180da1d42eef213f2bfdc10269c2a40f6cb2cfebfb94b7289ef",
+      "lines": 31
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/admin.tsx",
+      "target": "artifacts/micron-law/src/pages/admin.jsx",
+      "sha256": "a56e4c5467a90dee5083df7f5c71ab39dac9eb08e852b1f893ceb92237a9bc51",
+      "lines": 194
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/login.tsx",
+      "target": "artifacts/micron-law/src/pages/login.jsx",
+      "sha256": "2b28e701fac1b86b322820e01d2b8053d057c0e9fdb2c3146f98ad579fadf62b",
+      "lines": 46
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/not-found.tsx",
+      "target": "artifacts/micron-law/src/pages/not-found.jsx",
+      "sha256": "d88042db9f007b46f91ffcfea88568d0b69ec84ee5c509a45dc33f067db7d162",
+      "lines": 14
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/register.tsx",
+      "target": "artifacts/micron-law/src/pages/register.jsx",
+      "sha256": "1807c2f2918a0a405d15f242184b6d089cdd0983dd546f371c4b2ea2abb1e442",
+      "lines": 156
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/reset-password.tsx",
+      "target": "artifacts/micron-law/src/pages/reset-password.jsx",
+      "sha256": "16ba024d340c5d7b383f21e3092ccf52263ba06dfec365de59024ade89f7d9ce",
+      "lines": 93
+    },
+    {
+      "source": "artifacts/micron-law/src/pages/workspace.tsx",
+      "target": "artifacts/micron-law/src/pages/workspace.jsx",
+      "sha256": "08a26cd11b9fb4a79a05e1445cafbf7f07f6fd48ad1a0b3e94a99198c65c89c9",
+      "lines": 459
+    },
+    {
+      "source": "artifacts/micron-law/tests/clarification-draft.test.ts",
+      "target": "artifacts/micron-law/tests/clarification-draft.test.js",
+      "sha256": "b32ee29ff1ac395625ac2a1d4ee75c62481624a272a523559e2565f66bc0416d",
+      "lines": 63
+    },
+    {
+      "source": "artifacts/micron-law/tests/composer-action.test.ts",
+      "target": "artifacts/micron-law/tests/composer-action.test.js",
+      "sha256": "76be52a0573bfc9525145967435f60d7239fe587f80b644e90111592935532dc",
+      "lines": 49
+    },
+    {
+      "source": "artifacts/micron-law/vite.config.ts",
+      "target": "artifacts/micron-law/vite.config.js",
+      "sha256": "500295a1aa176fa1f4188c70237a11d3a3f542e95e9beb85b6a5269d5183fd25",
+      "lines": 67
+    },
+    {
+      "source": "artifacts/mockup-sandbox/mockupPreviewPlugin.ts",
+      "target": "artifacts/mockup-sandbox/mockupPreviewPlugin.js",
+      "sha256": "4d579d37f3d3d12ec8d8d78571b651c606ed44b07fb04a53aff02bcc75621cfd",
+      "lines": 181
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/.generated/mockup-components.ts",
+      "target": "artifacts/mockup-sandbox/src/.generated/mockup-components.js",
+      "sha256": "2c23d71ff9b2704c9db9aff8a414a728b810b10abc508e3bd75acf5718651cec",
+      "lines": 6
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/App.tsx",
+      "target": "artifacts/mockup-sandbox/src/App.jsx",
+      "sha256": "0e0e60da88a64ef68a930565bb5c5d326896aaa0f9cea62702eef4c02db2462a",
+      "lines": 147
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/accordion.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/accordion.jsx",
+      "sha256": "dcbfb3243a26096fc3e5f54039ccb5c4c23d9bb79a4d5846b4be75bf912f07d9",
+      "lines": 56
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/alert-dialog.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/alert-dialog.jsx",
+      "sha256": "311bede35f785d7b1ecd7398986757e26409d1049352a94ccf83586b8603c92d",
+      "lines": 140
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/alert.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/alert.jsx",
+      "sha256": "5950ac01377e7eedc94b00eb3fee678745e4cc1a72b5343867f0733d07db6660",
+      "lines": 60
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/aspect-ratio.jsx",
+      "sha256": "08b0aa0b05efc573c7d63363c03e83d4b101bfeb54140764e96ddea30659cfcc",
+      "lines": 6
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/avatar.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/avatar.jsx",
+      "sha256": "e78b35ed76c67d8ff50603fbe0dfa4fe600097bd860d89e65beea3e16683dad8",
+      "lines": 51
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/badge.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/badge.jsx",
+      "sha256": "0564174ab513773e924dda521ce205535b05c7df9842e331ebbb59dd8b86022d",
+      "lines": 38
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/breadcrumb.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/breadcrumb.jsx",
+      "sha256": "c3d3dcb0d82fc5e91d8830bac7fead905686fe876f1f42c3ed872bb0a6b6584e",
+      "lines": 116
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/button-group.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/button-group.jsx",
+      "sha256": "e3716d270e9ef6457b5cd29464ae00194abc8093c08ebf726c9204d7a69231d9",
+      "lines": 84
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/button.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/button.jsx",
+      "sha256": "4ea01d60fddbf1a0e66aa8234807d010378786b9bc5a934ed76a09edfa671040",
+      "lines": 59
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/calendar.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/calendar.jsx",
+      "sha256": "787a19c855cf2b826942d25440b63150c45094154c6a40e95abdb4109298b8b4",
+      "lines": 214
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/card.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/card.jsx",
+      "sha256": "525c4bb2c051987be64df0e92e1d90174912b219bf541e24ffbc4a3406de49e8",
+      "lines": 77
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/carousel.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/carousel.jsx",
+      "sha256": "5a4ff73c804e86c873382da80c453f1399006326ef042fb984c24162ec86666e",
+      "lines": 261
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/chart.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/chart.jsx",
+      "sha256": "74005899ffa62cff5cc71ddd72a727bdc84a9bd9b7e26901e1f10d2ca8d90b62",
+      "lines": 366
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/checkbox.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/checkbox.jsx",
+      "sha256": "ac389a574651c8bedffc10f80674c5fc2f02ab81291a5f4ad9c587d1f775fdce",
+      "lines": 29
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/collapsible.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/collapsible.jsx",
+      "sha256": "f4cdd104de29928bfcd40b865c7d08eed9157a537fbb8b5e6d0921f02b63cc04",
+      "lines": 12
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/command.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/command.jsx",
+      "sha256": "5a57ebc119f2357b097098d22865d45de8fda623ee88fe98b99999838c13633b",
+      "lines": 154
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/context-menu.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/context-menu.jsx",
+      "sha256": "5369fc82c51df067aec2934f5e711aaf9e3f745ed7baadd7ba4b77397dee2a1b",
+      "lines": 199
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/dialog.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/dialog.jsx",
+      "sha256": "f9c982ed8114c253c6ca738043d3f455e89c6d65569e90c9415776d6b4d6be14",
+      "lines": 121
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/drawer.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/drawer.jsx",
+      "sha256": "47ff6248307a4ac09bf7e00181a2a29f9f846691092e04cad03e15d749bc249b",
+      "lines": 117
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/dropdown-menu.jsx",
+      "sha256": "dc109123ecd59af01d07aa9f3a8e8a7085bd3f337388c5369799ab1ce6c2d45f",
+      "lines": 202
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/empty.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/empty.jsx",
+      "sha256": "9f975582a0290dbc7ce6efa3b36b376a4c3f07863026c3b74c1e73cb0023acb8",
+      "lines": 105
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/field.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/field.jsx",
+      "sha256": "e463611ab049c5e9b1c61691d239e05970ead7b577a191b3f80aa6f8ffccada9",
+      "lines": 245
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/form.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/form.jsx",
+      "sha256": "d50adf86568f76246f0f319c9e1e858627475563f6c1e38f5df7d4ee23958559",
+      "lines": 177
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/hover-card.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/hover-card.jsx",
+      "sha256": "00f9086b1412843e04e01d31d2fab00a25d65d789d1a382e41f01b1f3c167c3b",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/input-group.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/input-group.jsx",
+      "sha256": "131052098fa8b16b423192ec7dcc8c8506f0e7e81355134aae4c9044e1d3ef95",
+      "lines": 166
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/input-otp.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/input-otp.jsx",
+      "sha256": "7c4799e3597f2780c09a39a1391b921fa16eaedd0476457492af734f58e2ec98",
+      "lines": 70
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/input.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/input.jsx",
+      "sha256": "6299a6a387dc55e528aec4342deaea0b83f1ea3a365c135a31a18ee55334f441",
+      "lines": 23
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/item.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/item.jsx",
+      "sha256": "90983640aa7cfef8217422347d8e14825cf55137c76369decacf440767f03188",
+      "lines": 194
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/kbd.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/kbd.jsx",
+      "sha256": "0c025e7736d435f563bfb44105e562629672799eb1f35cbf194148d06cd1a9f7",
+      "lines": 29
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/label.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/label.jsx",
+      "sha256": "2eac8fbb04002c42b0fbc4062d20d131e421796eaf65c37d2049e29e42ecbc5a",
+      "lines": 27
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/menubar.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/menubar.jsx",
+      "sha256": "def61eb2c47c9ec319423471f4ca20045e99549958211cacf832e4ede769e484",
+      "lines": 255
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/navigation-menu.jsx",
+      "sha256": "a06d96a582ac207ffcd38445d773c05e841d646efb185b5e9b65f73e5bd388c7",
+      "lines": 129
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/pagination.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/pagination.jsx",
+      "sha256": "9506dbd19ddd0c2810d1c9668a3f01606e39d9bf33ddc43329523c03bf629012",
+      "lines": 118
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/popover.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/popover.jsx",
+      "sha256": "04cf38bf94abd3fe1b51e90227e6e235ca74776f6fc6af718bfc149e7424f582",
+      "lines": 32
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/progress.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/progress.jsx",
+      "sha256": "6b3b4b69a1cb361076174892e9a96e1a09020307616965ef89f2f7e2495b57a9",
+      "lines": 29
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/radio-group.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/radio-group.jsx",
+      "sha256": "9ba7808b7404cdf2159c81883a39290033bc4308f2978eb80797c92b87421301",
+      "lines": 43
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/resizable.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/resizable.jsx",
+      "sha256": "70d1e35a5fb0897af7063cdd841d8ed636e1c332ef7ea6469f0f175a5a93dddf",
+      "lines": 46
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/scroll-area.jsx",
+      "sha256": "d7d02600effca55d0dcadce8c09c97ebddda3a19c5fa1d52dc9f6f727b26c6b1",
+      "lines": 47
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/select.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/select.jsx",
+      "sha256": "3d93ae07a8f3fe121ba60f4439e26bd7859f247eb8bfcafcf4b4a8a069888eec",
+      "lines": 160
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/separator.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/separator.jsx",
+      "sha256": "c956c4cca4b8442fa9314d6079b9f975e1ee39d5804aaf2966990f6258ac342a",
+      "lines": 30
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/sheet.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/sheet.jsx",
+      "sha256": "363f8e06aa5b53c6475f445117f60fa9294be79e9e4f1f5bf70886800188124e",
+      "lines": 141
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/sidebar.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/sidebar.jsx",
+      "sha256": "53c5391594a46de2c3161de40eb56953ff6ddb09a9c64b877ea98af810b0ed35",
+      "lines": 715
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/skeleton.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/skeleton.jsx",
+      "sha256": "87608e7cc815ad3d88e0b9de6c402bb37b58ea1b38636cf69709da1baff6e334",
+      "lines": 16
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/slider.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/slider.jsx",
+      "sha256": "234e38fef59169bd02d8f5b56ca02e5ec13a0bd6846c328927b924e1299f7fb0",
+      "lines": 27
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/sonner.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/sonner.jsx",
+      "sha256": "771ab8637d27384c3ed030ba3be01a07b90c791c294eae06646250f8e81bc49e",
+      "lines": 32
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/spinner.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/spinner.jsx",
+      "sha256": "3e6e6e8d37fb4069f8e43e55318f8db06fbc36e6c8be0096da3c9337c1c798b9",
+      "lines": 17
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/switch.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/switch.jsx",
+      "sha256": "ba5867cd3145af1290edd80bb56d4b6d61c6331aa8ef96ae0b85487f4499feaf",
+      "lines": 28
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/table.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/table.jsx",
+      "sha256": "a4a6972c2d47d465d7f02c1dc4a6cbfeda7a97e46479c1b0cebdaf26bf9b497a",
+      "lines": 121
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/tabs.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/tabs.jsx",
+      "sha256": "6f74706bc6b53f9e4bcebb5e7ab8743b616aef181edc7758b8ee905f9b2fdcd7",
+      "lines": 54
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/textarea.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/textarea.jsx",
+      "sha256": "ec7c92aaed80f6923a7caa4bfe4eead395b50a7001504fd7fbb0b9381804dae9",
+      "lines": 23
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/toast.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/toast.jsx",
+      "sha256": "99f9f4a3e897f71d89b01c6772b2f5db51b888cecb2c8214fb2c2dbb2b3e6356",
+      "lines": 128
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/toaster.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/toaster.jsx",
+      "sha256": "1348f1a1f9820e2f1394b93cecc156a7e22f03636ab9270753985549aae2be74",
+      "lines": 34
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/toggle-group.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/toggle-group.jsx",
+      "sha256": "dba95ead40d163af6959198ded9853a2cc9282b2cb534980f99937a65edf4e2d",
+      "lines": 62
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/toggle.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/toggle.jsx",
+      "sha256": "955fa1bb97505b7a8bba3f7cff1991035a9afa0e1113f5d598147e6369dbf44b",
+      "lines": 44
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/components/ui/tooltip.tsx",
+      "target": "artifacts/mockup-sandbox/src/components/ui/tooltip.jsx",
+      "sha256": "ce6afa34fb9dae51053a863b4c3f7c6e55f3da23b00149f31a8e4402bc963be0",
+      "lines": 33
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/hooks/use-mobile.tsx",
+      "target": "artifacts/mockup-sandbox/src/hooks/use-mobile.jsx",
+      "sha256": "ad0936f84f1df79d3697bfbff9c18f8ad58431c1cbaf2359c6a853b0fcc9f28b",
+      "lines": 20
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/hooks/use-toast.ts",
+      "target": "artifacts/mockup-sandbox/src/hooks/use-toast.js",
+      "sha256": "eb23d01c5e502ae1e0772f4303147170811b11f498c7e8f0dc8424c0f3463c94",
+      "lines": 190
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/lib/utils.ts",
+      "target": "artifacts/mockup-sandbox/src/lib/utils.js",
+      "sha256": "7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d",
+      "lines": 7
+    },
+    {
+      "source": "artifacts/mockup-sandbox/src/main.tsx",
+      "target": "artifacts/mockup-sandbox/src/main.jsx",
+      "sha256": "29946f51942fba11605c7595fd82b50b0d7e50148e0194fd356dacbc958f18ec",
+      "lines": 6
+    },
+    {
+      "source": "artifacts/mockup-sandbox/vite.config.ts",
+      "target": "artifacts/mockup-sandbox/vite.config.js",
+      "sha256": "13a5f91b37ef8a03dc72a1320a3a2d57065f63bf9cce645e82beb603b49078f3",
+      "lines": 60
+    },
+    {
+      "source": "lib/api-client-react/src/custom-fetch.ts",
+      "target": "lib/api-client-react/src/custom-fetch.js",
+      "sha256": "3a5605ea89571cca7ea9412a230a40954e3a3f1d94d7a566271480165bf5e03c",
+      "lines": 372
+    },
+    {
+      "source": "lib/api-client-react/src/generated/api.schemas.ts",
+      "target": "lib/api-client-react/src/generated/api.schemas.js",
+      "sha256": "120e6b69ca67dda4a0815a5990baefa42b63fc759f351ff44affdbc6d455ce5a",
+      "lines": 765
+    },
+    {
+      "source": "lib/api-client-react/src/generated/api.ts",
+      "target": "lib/api-client-react/src/generated/api.js",
+      "sha256": "f482f7bc0e29b8da96049f5c34330fe22f392fa37db9724f020a1aca7898b974",
+      "lines": 4185
+    },
+    {
+      "source": "lib/api-client-react/src/index.ts",
+      "target": "lib/api-client-react/src/index.js",
+      "sha256": "7974b36e3973a8d0c403589bcf8d8aca7547c5c42c4b73924d05f49de18809e5",
+      "lines": 5
+    },
+    {
+      "source": "lib/api-spec/orval.config.ts",
+      "target": "lib/api-spec/orval.config.js",
+      "sha256": "17bbe15ed439c69c5a900398b2a146e4c8d8c79365479cb0ca9adc4dd4058776",
+      "lines": 77
+    },
+    {
+      "source": "lib/api-zod/src/generated/api.ts",
+      "target": "lib/api-zod/src/generated/api.js",
+      "sha256": "e41974fe5e96e9369e355b1b08babbb13f0e70f8e860ef9ad3f9967ab08d0b99",
+      "lines": 1378
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/actionResult.ts",
+      "target": "lib/api-zod/src/generated/types/actionResult.js",
+      "sha256": "250c7cdcfe1042469d36ac0f08c44679440726c81a90570708ac11c7751cab38",
+      "lines": 11
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/adminAuditEvent.ts",
+      "target": "lib/api-zod/src/generated/types/adminAuditEvent.js",
+      "sha256": "24515dd88430c7227846df09132b62ba3058aa362a7abd60a9925895d76fc469",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/adminAuditPage.ts",
+      "target": "lib/api-zod/src/generated/types/adminAuditPage.js",
+      "sha256": "9df35ce6fc11ece8bc333959ac586621dde8bdff52eba88c70dbf60fa0011377",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/adminCredentials.ts",
+      "target": "lib/api-zod/src/generated/types/adminCredentials.js",
+      "sha256": "9e550787f309aab3a7ec513228b8beb77822d22617b7d091ceede52e42ee519c",
+      "lines": 20
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/adminLawyer.ts",
+      "target": "lib/api-zod/src/generated/types/adminLawyer.js",
+      "sha256": "c2f97f95237cc162797e1b9f67c9517c90c25b01698cf88fb217824e22cfdc33",
+      "lines": 14
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/adminLawyerPage.ts",
+      "target": "lib/api-zod/src/generated/types/adminLawyerPage.js",
+      "sha256": "b2f9465db0f99af030011eb283e4047ee893c60cd367f70c9e91f3486bfd1fd0",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisCapability.ts",
+      "target": "lib/api-zod/src/generated/types/analysisCapability.js",
+      "sha256": "1482675eb3d4b59f45a70db62e16d91c9bbbaa40b0f5454828937d2ceafc4f81",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperation.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperation.js",
+      "sha256": "783263246aec3ea09535fb2ca3c5ea98e753a8c5c795fa4c03a0a95e46f83207",
+      "lines": 45
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperationFailureCode.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperationFailureCode.js",
+      "sha256": "a924d5c7c1fa15026928ebe3f6ec8efa02c642566d62f860023aa7336ca50458",
+      "lines": 27
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperationInput.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperationInput.js",
+      "sha256": "9c42d1f9b82ace9dc07caf33558f64b3bde060d73f2bf7bf0652d48d3e8adce4",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperationPdfEvidence.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperationPdfEvidence.js",
+      "sha256": "d36acb76924fe6ba9a7c5a4f375774cb148319db8f94e2fd003b412f94afb637",
+      "lines": 13
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperationResult.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperationResult.js",
+      "sha256": "0ee81e9b2c0e64dc8d5c2804ec3e6297cb7739ea845a6a50a8183887af22b61f",
+      "lines": 13
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisOperationStatus.ts",
+      "target": "lib/api-zod/src/generated/types/analysisOperationStatus.js",
+      "sha256": "add01de4036e8f173e2776087aa09ccf1366f0f41cd09d259c06846f5d566442",
+      "lines": 17
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisSource.ts",
+      "target": "lib/api-zod/src/generated/types/analysisSource.js",
+      "sha256": "d1c1a485315417a4544d6694243c9cf5f1fe3be68d342b63d915de88af32d409",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/analysisSourceBasis.ts",
+      "target": "lib/api-zod/src/generated/types/analysisSourceBasis.js",
+      "sha256": "e88483c2916ec6c13ac34da5dcc25b9295f2a23262e69c39b8f2485305cffbd1",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/attachmentInput.ts",
+      "target": "lib/api-zod/src/generated/types/attachmentInput.js",
+      "sha256": "ff1a8c578db24ad2ed3b53c5fcdebc21b3234083da601e90866b8a5f8afd3840",
+      "lines": 20
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseAttachment.ts",
+      "target": "lib/api-zod/src/generated/types/caseAttachment.js",
+      "sha256": "b448d05b87f0664ebbb6a01b4759860e4008736c2c3711d7522dbfb0eec98824",
+      "lines": 24
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseAttachmentStatus.ts",
+      "target": "lib/api-zod/src/generated/types/caseAttachmentStatus.js",
+      "sha256": "1db1cab35f076d4fac2efb96bb6ceb80f2f0dbfadd82e481e7d14e055cb73295",
+      "lines": 17
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseConversation.ts",
+      "target": "lib/api-zod/src/generated/types/caseConversation.js",
+      "sha256": "b0c551f6057fa4f01ef4b1f62fc51c4a139049e439720cc19b9e05f9528f1d54",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseCreationInput.ts",
+      "target": "lib/api-zod/src/generated/types/caseCreationInput.js",
+      "sha256": "739bcfd4d18e138730deebc6ea972109874bb7637e094b5db05685bc755d4800",
+      "lines": 11
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseFees.ts",
+      "target": "lib/api-zod/src/generated/types/caseFees.js",
+      "sha256": "de0acab73300fa968dad0a01d3267993188674b6b56ddabef9315e065288f193",
+      "lines": 21
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseFeesCurrency.ts",
+      "target": "lib/api-zod/src/generated/types/caseFeesCurrency.js",
+      "sha256": "e830b2cdaceaf7b15ade069a40106cef0410238a2c1932db35223f206c1168d6",
+      "lines": 14
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseFolder.ts",
+      "target": "lib/api-zod/src/generated/types/caseFolder.js",
+      "sha256": "002c6c869a7d60c976b0073c76ada6c60bf321d3c52e45ea7e2455a3f4ec5367",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseFolderInput.ts",
+      "target": "lib/api-zod/src/generated/types/caseFolderInput.js",
+      "sha256": "591e757da6bd996665c71143555e8c8efb0d75dde03cd2332c2ff3ebee14def1",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseFolderNameInput.ts",
+      "target": "lib/api-zod/src/generated/types/caseFolderNameInput.js",
+      "sha256": "ad0ea6f9570302274e4ed59681d66e7f7996124da26f7be39d8bb3ce16180ed9",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseInfo.ts",
+      "target": "lib/api-zod/src/generated/types/caseInfo.js",
+      "sha256": "90a45641ccc73f46eb6fa0ed7dd77484387f3c08c8eceb0b98d1e1f2949fed8c",
+      "lines": 25
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseInfoTaskType.ts",
+      "target": "lib/api-zod/src/generated/types/caseInfoTaskType.js",
+      "sha256": "35bcafdd2d3f3f1099a4dcc7182ed0730f4f694c2dd90226a00c0d1878489596",
+      "lines": 14
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseMessage.ts",
+      "target": "lib/api-zod/src/generated/types/caseMessage.js",
+      "sha256": "e4d19968806e77a2f21f3daf8d51b31b631ea8cfac6f2eb1048cc9468de1271b",
+      "lines": 20
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/caseOrganizationInput.ts",
+      "target": "lib/api-zod/src/generated/types/caseOrganizationInput.js",
+      "sha256": "87d3ff5be3a145b08451e51e48a41e5274265ada2c8e488a0a9aa49c8be81e09",
+      "lines": 21
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/challenge.ts",
+      "target": "lib/api-zod/src/generated/types/challenge.js",
+      "sha256": "b647a19bb44fea206a1ad40428d03562124cb024ab3a8c50bfb3ff706245b1e3",
+      "lines": 13
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/clarificationLink.ts",
+      "target": "lib/api-zod/src/generated/types/clarificationLink.js",
+      "sha256": "97dd5a21e2be6deea346e4ac525d52b76504ab42ba2c9bad245b3d43b61e2b5a",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/clientPinInput.ts",
+      "target": "lib/api-zod/src/generated/types/clientPinInput.js",
+      "sha256": "03cbd09e62d7de6da7aad507ba6eb36e6faa14c1a8aaf81bd7751ec92b2c700d",
+      "lines": 11
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/documentInput.ts",
+      "target": "lib/api-zod/src/generated/types/documentInput.js",
+      "sha256": "93dde2ee298a2c2733c86bb0b6aad51edefccae93020744ce8e0374c92ec58a6",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/documentInputKind.ts",
+      "target": "lib/api-zod/src/generated/types/documentInputKind.js",
+      "sha256": "9685e7a36b62a2342cee670824da9cf0e14908087117efad0328a09fb4927d91",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/exportSavedReportFormat.ts",
+      "target": "lib/api-zod/src/generated/types/exportSavedReportFormat.js",
+      "sha256": "9aa1dbd7bb236623c4b9f93bd74f27b8fbddceceef9dcf11789b1926b66eff7c",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/exportSavedReportParams.ts",
+      "target": "lib/api-zod/src/generated/types/exportSavedReportParams.js",
+      "sha256": "024b5c4a7e041c03e345f7526ce976353e9996e1394fa1d7645d4b97db879a03",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/feeAgreementInput.ts",
+      "target": "lib/api-zod/src/generated/types/feeAgreementInput.js",
+      "sha256": "10aa11d64b429e277dc4eedea79b134bfb8f808cb688013c5975b04431651230",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/feeReceipt.ts",
+      "target": "lib/api-zod/src/generated/types/feeReceipt.js",
+      "sha256": "6152db1c5c115ac4a4410439130ba9faf0524a4c4363e80dcfcc6acb5dd383ef",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/feeReceiptFields.ts",
+      "target": "lib/api-zod/src/generated/types/feeReceiptFields.js",
+      "sha256": "115d0aa4da1cb56aa815412da24ff13442fa8dfb3d42e113796276b8282bb329",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/feeReceiptInput.ts",
+      "target": "lib/api-zod/src/generated/types/feeReceiptInput.js",
+      "sha256": "a09606bd373e94e50a104c50b8f1386a1f2bbc55b2e9910d13c33638531c83e6",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/getAdminAuditEventsParams.ts",
+      "target": "lib/api-zod/src/generated/types/getAdminAuditEventsParams.js",
+      "sha256": "346791aefb3106f80e6ec7f05a22aff0f7868855a38c5121c6105f3720dec6ca",
+      "lines": 22
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/getAdminLawyerAcceptancesParams.ts",
+      "target": "lib/api-zod/src/generated/types/getAdminLawyerAcceptancesParams.js",
+      "sha256": "e67f13fb895c7f51f8481de1cf38b017f67e732c7e89c3eb5741cae46b49b8a0",
+      "lines": 23
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/getAdminLawyersParams.ts",
+      "target": "lib/api-zod/src/generated/types/getAdminLawyersParams.js",
+      "sha256": "60231edb3add8d6e83154e688eb6f46a284a877654be5634046cf511480c3a90",
+      "lines": 22
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/getAttachmentPolicy200.ts",
+      "target": "lib/api-zod/src/generated/types/getAttachmentPolicy200.js",
+      "sha256": "abc344029a870d7026e7dff17eae72975c03b595a4538ebbce5b50f9935b0dee",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/getAttachmentPolicy200FormatsItem.ts",
+      "target": "lib/api-zod/src/generated/types/getAttachmentPolicy200FormatsItem.js",
+      "sha256": "ea1c38e90e425027eaf903e6e506d6cb20da4068f047322ab7e27ca7d99ef670",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/healthStatus.ts",
+      "target": "lib/api-zod/src/generated/types/healthStatus.js",
+      "sha256": "6ccf17c2dc7f498c00627c8568bea6f04963b1954d3db765d8b4278bf343ca66",
+      "lines": 11
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/index.ts",
+      "target": "lib/api-zod/src/generated/types/index.js",
+      "sha256": "edfa7e714966f4dd6af56fad0da62db812121fbe0e3d4985e40008de61e710ee",
+      "lines": 87
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/lawyerClient.ts",
+      "target": "lib/api-zod/src/generated/types/lawyerClient.js",
+      "sha256": "3d4b0a4dcf8ebf14e88f9392c088038a75c384ce16be8f22df0deded2e226f63",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/lawyerClientDetail.ts",
+      "target": "lib/api-zod/src/generated/types/lawyerClientDetail.js",
+      "sha256": "1f1ca6a2de3f09f4a7691fa8cbe33eeeab9beb25bf512c1caffad5e212043908",
+      "lines": 14
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/lawyerClientFields.ts",
+      "target": "lib/api-zod/src/generated/types/lawyerClientFields.js",
+      "sha256": "1d19f758ca50f56afb256453417a00555be21da02a8d466651ed49de6e740148",
+      "lines": 26
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/lawyerClientFieldsType.ts",
+      "target": "lib/api-zod/src/generated/types/lawyerClientFieldsType.js",
+      "sha256": "d0d3e083d83d2261964d19f73e0dac4722a91298271728ae5a7fe5b99b371844",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/lawyerClientInput.ts",
+      "target": "lib/api-zod/src/generated/types/lawyerClientInput.js",
+      "sha256": "644dc81c3799d222e4ec59e58a3b5f8e4dea5c281a41296ee71d0b5d749faa63",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/legalAcceptance.ts",
+      "target": "lib/api-zod/src/generated/types/legalAcceptance.js",
+      "sha256": "c360bc9ff33d2ed531fd3ba76bc430a9593f516465a9b01b069783a188d83060",
+      "lines": 22
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/legalAcceptancePage.ts",
+      "target": "lib/api-zod/src/generated/types/legalAcceptancePage.js",
+      "sha256": "8c47025b04960c6765bf0cebff53ecbcfe315a8aef841895002536f7a8a6fcc8",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/legalDocument.ts",
+      "target": "lib/api-zod/src/generated/types/legalDocument.js",
+      "sha256": "2ab07b10b40b89fc66f2c32d71a6d318b90968ff781c9e3435c55f918038f3b5",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/legalDocumentKind.ts",
+      "target": "lib/api-zod/src/generated/types/legalDocumentKind.js",
+      "sha256": "03eb9069fee2444fcef0869d8e0dfb401e791b511cfcce0a852f30866b5d660b",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/loginInput.ts",
+      "target": "lib/api-zod/src/generated/types/loginInput.js",
+      "sha256": "360dbba383a29f666e2b5bc9b573a41eb990f066653d0e3b575f5b960902c1a1",
+      "lines": 17
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/messageInput.ts",
+      "target": "lib/api-zod/src/generated/types/messageInput.js",
+      "sha256": "a0806954612e22142c3ca4f65e423636abe0a8ee7f54dfc8b64925a3ed161708",
+      "lines": 22
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/mobileInput.ts",
+      "target": "lib/api-zod/src/generated/types/mobileInput.js",
+      "sha256": "99e55217a711a983a3ef13507f687843e901150ab617f9c98478071473bcc246",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/pageLimitParameter.ts",
+      "target": "lib/api-zod/src/generated/types/pageLimitParameter.js",
+      "sha256": "754e522d816a8e079ae339831235d49c551fa4adcfae533d153cd65541df2d97",
+      "lines": 9
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/pageOffsetParameter.ts",
+      "target": "lib/api-zod/src/generated/types/pageOffsetParameter.js",
+      "sha256": "9d9ac7cfc003db897139233d7dcd40305fdc5c496c493231d479b911fe55da8d",
+      "lines": 9
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/passwordResetInput.ts",
+      "target": "lib/api-zod/src/generated/types/passwordResetInput.js",
+      "sha256": "7241369136ef4933846e1af4f6e2fe11c31dc7d8f5ff4d6ed059adc917c7602c",
+      "lines": 20
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/prepareAttachment200.ts",
+      "target": "lib/api-zod/src/generated/types/prepareAttachment200.js",
+      "sha256": "95b2d5ce05b07bb7078b43d377f42e32a60cf0b8304a68d394763d1b13374c6f",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/registrationInput.ts",
+      "target": "lib/api-zod/src/generated/types/registrationInput.js",
+      "sha256": "e2acfc83e01fa346e1849fd16e54726262824c4ef88c38dedf8a32c2042efd78",
+      "lines": 27
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportInteraction.ts",
+      "target": "lib/api-zod/src/generated/types/reportInteraction.js",
+      "sha256": "85125edb3e55b89511a9d3d6b2595f53881aafd8edfa6e90065d51be3fb6df7a",
+      "lines": 27
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportInteractionInput.ts",
+      "target": "lib/api-zod/src/generated/types/reportInteractionInput.js",
+      "sha256": "7964be6daff32aeb5b6503c53112a305dcb9821f53c95511795adc6d3a914b50",
+      "lines": 22
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportInteractionInputKind.ts",
+      "target": "lib/api-zod/src/generated/types/reportInteractionInputKind.js",
+      "sha256": "566713ac9ff4b9608242bbf8cb9614c2aa39f685b1fcd44d2752f42f827e45f0",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportInteractionKind.ts",
+      "target": "lib/api-zod/src/generated/types/reportInteractionKind.js",
+      "sha256": "6125134e1e776a0331ae9cc2579bad3a8d1775bb6f39c52602756cc99fc6504d",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportInteractionStatus.ts",
+      "target": "lib/api-zod/src/generated/types/reportInteractionStatus.js",
+      "sha256": "ef2c3bc9ce62e7a5843fc8b26df3db2dd6c7cee400682da367cab1c0773a2df3",
+      "lines": 19
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportQuestion.ts",
+      "target": "lib/api-zod/src/generated/types/reportQuestion.js",
+      "sha256": "d9b84eeac366b1f1aeae2bdd455017cf1b1c0bd123b185a8e54243f4ee3672cb",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportQuestionLink.ts",
+      "target": "lib/api-zod/src/generated/types/reportQuestionLink.js",
+      "sha256": "c33d9affe392cf959c905841120c44458d79e93606f2adc5d2e5b9c0d3b4d18f",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportVersion.ts",
+      "target": "lib/api-zod/src/generated/types/reportVersion.js",
+      "sha256": "d6183fc069174a177649ed270258441e803a1081e79f55346d2aca63efade4b5",
+      "lines": 21
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportVersionKind.ts",
+      "target": "lib/api-zod/src/generated/types/reportVersionKind.js",
+      "sha256": "d4d08100b96cea9813635f37c9757641e2d2e89bd6f2b9fbc3be1c69ccc33594",
+      "lines": 17
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/reportVersionReport.ts",
+      "target": "lib/api-zod/src/generated/types/reportVersionReport.js",
+      "sha256": "9b0efded41659ea60635b25cea13bac5b4eb9f5f48e0dc2ae8e66cd5f3ab8e8b",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/saveReportVersionInput.ts",
+      "target": "lib/api-zod/src/generated/types/saveReportVersionInput.js",
+      "sha256": "dfa49991d6be1b384ffed4d37b60a233fbd67dda3e1a1404d0d33fb659c9d543",
+      "lines": 16
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/saveReportVersionInputEditsItem.ts",
+      "target": "lib/api-zod/src/generated/types/saveReportVersionInputEditsItem.js",
+      "sha256": "4cf03529bb49ddbdae5f1a725446c1260993f87256c9c2d497154e84dba44474",
+      "lines": 18
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/sessionInfo.ts",
+      "target": "lib/api-zod/src/generated/types/sessionInfo.js",
+      "sha256": "03bef0918502fbbdf3d23b7a39d343e1417ebb1200d204ad700891333ef2eec0",
+      "lines": 14
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/user.ts",
+      "target": "lib/api-zod/src/generated/types/user.js",
+      "sha256": "6a4c329e9a6d4d9561ce89ceb0bb8aea89c30a00419fd9950e1b78634f96b7e2",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/userRole.ts",
+      "target": "lib/api-zod/src/generated/types/userRole.js",
+      "sha256": "cda5f73e16fa14251e6bce6a8972b4a1c863b440b61f9d7abddcb6207a1488da",
+      "lines": 15
+    },
+    {
+      "source": "lib/api-zod/src/generated/types/verificationInput.ts",
+      "target": "lib/api-zod/src/generated/types/verificationInput.js",
+      "sha256": "88ad167dc87653840378f6b77936d2aa8cdfce353584ec89f4153119300bc8ee",
+      "lines": 12
+    },
+    {
+      "source": "lib/api-zod/src/index.ts",
+      "target": "lib/api-zod/src/index.js",
+      "sha256": "effb7d33b5df99004c9b1a840944516ca3ad65cbcd3ae2fcc717c505814ce039",
+      "lines": 3
+    },
+    {
+      "source": "lib/db/src/index.ts",
+      "target": "lib/db/src/index.js",
+      "sha256": "994b95804cdd8d299c455aadd28b13ec49269e4ef4c4616f59083cd72ac2657a",
+      "lines": 12
+    },
+    {
+      "source": "scripts/src/hello.ts",
+      "target": "scripts/src/hello.js",
+      "sha256": "9a865c3de9900891e697e1ee8632dd565ce69bd7cb6b610e48b26bc0ee9e81e9",
+      "lines": 2
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "type": "json_schema",
+  "name": "micron_case_analysis_v1",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "clarification",
+          "report",
+          "blocked"
+        ]
+      },
+      "clarification": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string"
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "allow_unknown": {
+                      "type": "boolean"
+                    },
+                    "allow_not_applicable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "question",
+                    "options",
+                    "allow_unknown",
+                    "allow_not_applicable"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "context",
+              "questions"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "report": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "sections": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "section_id": {
+                      "type": "string",
+                      "enum": [
+                        "summary",
+                        "facts",
+                        "characterization",
+                        "evidence",
+                        "position",
+                        "legal_basis",
+                        "risks",
+                        "conclusions"
+                      ]
+                    },
+                    "blocks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "lawyer_statement",
+                              "documented",
+                              "legal_source",
+                              "analysis",
+                              "conditional",
+                              "unverified"
+                            ]
+                          },
+                          "source_refs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "basis",
+                          "source_refs"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "section_id",
+                    "blocks"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "alerts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "urgent",
+                        "important",
+                        "note"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "attachment_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "severity",
+                    "message",
+                    "attachment_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "change_summary": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "title",
+              "sections",
+              "alerts",
+              "change_summary"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "blocked": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "needed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "message",
+              "needed"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "kind",
+      "clarification",
+      "report",
+      "blocked"
+    ],
+    "additionalProperties": false
+  }
+}

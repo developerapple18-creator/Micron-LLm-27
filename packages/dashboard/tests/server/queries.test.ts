@@ -1,0 +1,1394 @@
+import { describe, it, expect } from 'vitest'
+import pg from 'pg'
+import {
+  ctx,
+  getBoss,
+  createTestQueue,
+  sendTestJob,
+  insertTestWarning,
+  insertTestBam,
+  updateQueueStats,
+  fetchTestJob,
+  completeTestJob,
+  failTestJob,
+} from './helpers'
+import {
+  getQueuePage,
+  getQueue,
+  getQueueCount,
+  getProblemQueues,
+  getProblemQueuesCount,
+  getTopQueues,
+  getRecentJobs,
+  getQueueNames,
+  getJobs,
+  getJobCountFromQueue,
+  getJobById,
+  getWarnings,
+  getWarningCount,
+  getBamEntries,
+  getBamCount,
+  getBamStatusSummary,
+  getQueueStats,
+  getSchedules,
+  getScheduleCount,
+  getSchedule,
+  clearScheduleColumnsCache,
+  cancelJob,
+  retryJob,
+  resumeJob,
+  deleteJob,
+  isValidIntent,
+} from '~/lib/queries.server'
+
+// A page wide enough to hold every row a test writes.
+const L = 100
+
+const { Pool } = pg
+
+describe('Queue Queries', () => {
+  describe('getQueuePage', () => {
+    it('returns queue stats from cached counts', async () => {
+      await createTestQueue('test-queue')
+      await updateQueueStats(ctx.schema, 'test-queue', {
+        queuedCount: 10,
+        activeCount: 5,
+        totalCount: 100,
+      })
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: L })).rows
+
+      expect(queues[0].queuedCount).toBe(10)
+      expect(queues[0].activeCount).toBe(5)
+      expect(queues[0].totalCount).toBe(100)
+    })
+
+    it('respects limit parameter', async () => {
+      await createTestQueue('queue-a')
+      await createTestQueue('queue-b')
+      await createTestQueue('queue-c')
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: 2 })).rows
+
+      expect(queues).toHaveLength(2)
+      expect(queues[0].name).toBe('queue-a')
+      expect(queues[1].name).toBe('queue-b')
+    })
+
+    it('pages after and before a cursor', async () => {
+      await createTestQueue('queue-a')
+      await createTestQueue('queue-b')
+      await createTestQueue('queue-c')
+
+      const first = await getQueuePage(ctx.connectionString, ctx.schema, { limit: 2 })
+      const second = await getQueuePage(ctx.connectionString, ctx.schema, { limit: 2, cursor: { after: first.nextCursor } })
+      const back = await getQueuePage(ctx.connectionString, ctx.schema, { limit: 2, cursor: { before: second.prevCursor } })
+
+      expect(first.hasNextPage).toBe(true)
+      expect(second.rows.map(q => q.name)).toEqual(['queue-c'])
+      expect(second.hasNextPage).toBe(false)
+      expect(second.hasPrevPage).toBe(true)
+      expect(back.rows.map(q => q.name)).toEqual(['queue-a', 'queue-b'])
+      expect(back.atStart).toBe(true)
+    })
+
+    it('filters by attention (queues exceeding warning threshold)', async () => {
+      await createTestQueue('normal-queue')
+      await createTestQueue('problem-queue')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 150 WHERE name = 'problem-queue'`
+      )
+      await pool.end()
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: L, filter: 'attention' })).rows
+
+      expect(queues).toHaveLength(1)
+      expect(queues[0].name).toBe('problem-queue')
+    })
+
+    it('filters by partitioned queues', async () => {
+      await createTestQueue('normal-queue', { partition: false })
+      await createTestQueue('partitioned-queue', { partition: true })
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: L, filter: 'partitioned' })).rows
+
+      expect(queues).toHaveLength(1)
+      expect(queues[0].name).toBe('partitioned-queue')
+    })
+
+    it('searches queues by name', async () => {
+      await createTestQueue('email-queue')
+      await createTestQueue('notification-queue')
+      await createTestQueue('other-queue')
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: L, search: 'email' })).rows
+
+      expect(queues).toHaveLength(1)
+      expect(queues[0].name).toBe('email-queue')
+    })
+
+    it('searches queues case-insensitively', async () => {
+      await createTestQueue('EMAIL-QUEUE')
+      await createTestQueue('other-queue')
+
+      const queues = (await getQueuePage(ctx.connectionString, ctx.schema, { limit: L, search: 'email' })).rows
+
+      expect(queues).toHaveLength(1)
+      expect(queues[0].name).toBe('EMAIL-QUEUE')
+    })
+  })
+
+  describe('getQueue', () => {
+    it('returns null when queue does not exist', async () => {
+      const queue = await getQueue(ctx.connectionString, ctx.schema, 'nonexistent')
+      expect(queue).toBeNull()
+    })
+
+    it('returns queue by name', async () => {
+      await createTestQueue('my-queue', { policy: 'singleton' })
+      await updateQueueStats(ctx.schema, 'my-queue', { queuedCount: 25 })
+
+      const queue = await getQueue(ctx.connectionString, ctx.schema, 'my-queue')
+
+      expect(queue).not.toBeNull()
+      expect(queue!.name).toBe('my-queue')
+      expect(queue!.policy).toBe('singleton')
+      expect(queue!.queuedCount).toBe(25)
+    })
+  })
+
+  describe('getProblemQueuesCount', () => {
+    it('returns 0 when no problem queues exist', async () => {
+      await createTestQueue('normal-queue')
+      const count = await getProblemQueuesCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(0)
+    })
+
+    it('returns count of queues exceeding warning threshold', async () => {
+      await createTestQueue('normal-queue')
+      await createTestQueue('problem-queue-1')
+      await createTestQueue('problem-queue-2')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 150 WHERE name = 'problem-queue-1'`
+      )
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 200 WHERE name = 'problem-queue-2'`
+      )
+      await pool.end()
+
+      const count = await getProblemQueuesCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(2)
+    })
+  })
+
+  describe('getQueueCount', () => {
+    it('returns 0 when no queues exist', async () => {
+      const count = await getQueueCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(0)
+    })
+
+    it('returns correct count', async () => {
+      await createTestQueue('queue-1')
+      await createTestQueue('queue-2')
+      await createTestQueue('queue-3')
+
+      const count = await getQueueCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(3)
+    })
+
+    it('counts with attention filter', async () => {
+      await createTestQueue('normal-queue')
+      await createTestQueue('problem-queue')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 150 WHERE name = 'problem-queue'`
+      )
+      await pool.end()
+
+      const count = await getQueueCount(ctx.connectionString, ctx.schema, { filter: 'attention' })
+      expect(count).toBe(1)
+    })
+
+    it('counts with partitioned filter', async () => {
+      await createTestQueue('normal-queue', { partition: false })
+      await createTestQueue('partitioned-1', { partition: true })
+      await createTestQueue('partitioned-2', { partition: true })
+
+      const count = await getQueueCount(ctx.connectionString, ctx.schema, { filter: 'partitioned' })
+      expect(count).toBe(2)
+    })
+
+    it('counts with search filter', async () => {
+      await createTestQueue('email-queue')
+      await createTestQueue('email-notifications')
+      await createTestQueue('sms-queue')
+
+      const count = await getQueueCount(ctx.connectionString, ctx.schema, { search: 'email' })
+      expect(count).toBe(2)
+    })
+  })
+
+  describe('getTopQueues', () => {
+    it('returns empty array when no queues exist', async () => {
+      const topQueues = await getTopQueues(ctx.connectionString, ctx.schema)
+      expect(topQueues).toEqual([])
+    })
+
+    it('returns queues ordered by total count desc', async () => {
+      await createTestQueue('low-volume')
+      await createTestQueue('high-volume')
+      await createTestQueue('medium-volume')
+
+      await updateQueueStats(ctx.schema, 'low-volume', { totalCount: 10 })
+      await updateQueueStats(ctx.schema, 'high-volume', { totalCount: 100 })
+      await updateQueueStats(ctx.schema, 'medium-volume', { totalCount: 50 })
+
+      const topQueues = await getTopQueues(ctx.connectionString, ctx.schema, 3)
+
+      expect(topQueues).toHaveLength(3)
+      expect(topQueues[0].name).toBe('high-volume')
+      expect(topQueues[1].name).toBe('medium-volume')
+      expect(topQueues[2].name).toBe('low-volume')
+    })
+
+    it('respects limit parameter', async () => {
+      await createTestQueue('queue-1')
+      await createTestQueue('queue-2')
+      await createTestQueue('queue-3')
+
+      const topQueues = await getTopQueues(ctx.connectionString, ctx.schema, 2)
+      expect(topQueues).toHaveLength(2)
+    })
+  })
+
+  describe('getProblemQueues', () => {
+    it('returns empty array when no problem queues', async () => {
+      await createTestQueue('normal-queue')
+      // Set warning threshold and queued count below it
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 50 WHERE name = 'normal-queue'`
+      )
+      await pool.end()
+
+      const problems = await getProblemQueues(ctx.connectionString, ctx.schema)
+      expect(problems).toEqual([])
+    })
+
+    it('returns queues exceeding their warning threshold', async () => {
+      await createTestQueue('problem-queue')
+      await createTestQueue('normal-queue')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 200 WHERE name = 'problem-queue'`
+      )
+      await pool.query(
+        `UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 50 WHERE name = 'normal-queue'`
+      )
+      await pool.end()
+
+      const problems = await getProblemQueues(ctx.connectionString, ctx.schema)
+
+      expect(problems).toHaveLength(1)
+      expect(problems[0].name).toBe('problem-queue')
+    })
+
+    it('orders by backlog severity (highest first)', async () => {
+      await createTestQueue('minor-problem')
+      await createTestQueue('major-problem')
+      await createTestQueue('medium-problem')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`
+        UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 150 WHERE name = 'minor-problem';
+        UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 500 WHERE name = 'major-problem';
+        UPDATE ${ctx.schema}.queue SET warning_queued = 100, queued_count = 250 WHERE name = 'medium-problem';
+      `)
+      await pool.end()
+
+      const problems = await getProblemQueues(ctx.connectionString, ctx.schema)
+
+      expect(problems).toHaveLength(3)
+      expect(problems[0].name).toBe('major-problem')
+      expect(problems[1].name).toBe('medium-problem')
+      expect(problems[2].name).toBe('minor-problem')
+    })
+  })
+
+  describe('getQueueStats', () => {
+    it('returns zeros when no queues exist', async () => {
+      const stats = await getQueueStats(ctx.connectionString, ctx.schema)
+
+      expect(stats.totalDeferred).toBe(0)
+      expect(stats.totalQueued).toBe(0)
+      expect(stats.totalActive).toBe(0)
+      expect(stats.totalJobs).toBe(0)
+      expect(stats.queueCount).toBe(0)
+    })
+
+    it('aggregates stats from all queues', async () => {
+      await createTestQueue('queue-1')
+      await createTestQueue('queue-2')
+
+      await updateQueueStats(ctx.schema, 'queue-1', {
+        queuedCount: 10,
+        deferredCount: 4,
+        activeCount: 5,
+        failedCount: 2,
+        totalCount: 50,
+      })
+      await updateQueueStats(ctx.schema, 'queue-2', {
+        queuedCount: 20,
+        deferredCount: 5,
+        activeCount: 10,
+        failedCount: 3,
+        totalCount: 100,
+      })
+
+      const stats = await getQueueStats(ctx.connectionString, ctx.schema)
+
+      expect(stats.totalQueued).toBe(30)
+      expect(stats.totalDeferred).toBe(9)
+      // totalReady excludes deferred jobs: (10-4) + (20-5) = 21
+      expect(stats.totalReady).toBe(21)
+      expect(stats.totalActive).toBe(15)
+      expect(stats.totalFailed).toBe(5)
+      expect(stats.totalJobs).toBe(150)
+      expect(stats.queueCount).toBe(2)
+    })
+  })
+})
+
+describe('Job Queries', () => {
+  describe('getRecentJobs', () => {
+    it('returns empty array when no jobs exist', async () => {
+      const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L })).rows
+      expect(jobs).toEqual([])
+    })
+
+    it('returns recent jobs across all queues', async () => {
+      await createTestQueue('queue-1')
+      await createTestQueue('queue-2')
+      await sendTestJob('queue-1', { task: 'job1' })
+      await sendTestJob('queue-2', { task: 'job2' })
+
+      const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L })).rows
+      expect(jobs).toHaveLength(2)
+    })
+
+    it('filters jobs by pending state', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'created' })
+      await sendTestJob('test-queue', { task: 'will-be-completed' })
+
+      const fetchedJob = await fetchTestJob('test-queue')
+      if (fetchedJob) {
+        await completeTestJob('test-queue', fetchedJob.id)
+      }
+
+      const pendingJobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, state: 'pending' })).rows
+      // Should only return non-completed jobs (created and active)
+      expect(pendingJobs.length).toBeGreaterThan(0)
+    })
+
+    it('returns all jobs when state is all', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'job1' })
+      await sendTestJob('test-queue', { task: 'job2' })
+
+      const allJobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, state: 'all' })).rows
+      expect(allJobs).toHaveLength(2)
+    })
+
+    it('filters by specific state', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'created-job' })
+      await sendTestJob('test-queue', { task: 'will-be-active' })
+
+      await fetchTestJob('test-queue') // Makes one job active
+
+      const createdJobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, state: 'created' })).rows
+      expect(createdJobs.length).toBeGreaterThan(0)
+    })
+
+    it('pages with a cursor', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: '1' })
+      await sendTestJob('test-queue', { task: '2' })
+      await sendTestJob('test-queue', { task: '3' })
+
+      const firstPage = await getRecentJobs(ctx.connectionString, ctx.schema, { limit: 2 })
+      expect(firstPage.rows).toHaveLength(2)
+      expect(firstPage.hasNextPage).toBe(true)
+
+      const secondPage = await getRecentJobs(ctx.connectionString, ctx.schema, { limit: 2, cursor: { after: firstPage.nextCursor } })
+      expect(secondPage.rows).toHaveLength(1)
+      expect(secondPage.hasNextPage).toBe(false)
+      expect(secondPage.rows[0].id).not.toBe(firstPage.rows[1].id)
+    })
+
+    describe('filters', () => {
+      it('filters by exact job id', async () => {
+        await createTestQueue('test-queue')
+        const targetId = await sendTestJob('test-queue', { task: 'target' })
+        await sendTestJob('test-queue', { task: 'other' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, id: targetId })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(targetId)
+      })
+
+      it('returns empty when id is not a valid UUID without hitting Postgres', async () => {
+        await createTestQueue('test-queue')
+        await sendTestJob('test-queue', { task: 'whatever' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, id: 'not-a-uuid' })).rows
+        expect(jobs).toEqual([])
+      })
+
+      it('filters by a list of queue names', async () => {
+        await createTestQueue('alpha')
+        await createTestQueue('beta')
+        await createTestQueue('gamma')
+        await sendTestJob('alpha', { task: 'a' })
+        await sendTestJob('beta', { task: 'b' })
+        await sendTestJob('gamma', { task: 'c' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, queues: ['alpha', 'beta'] })).rows
+        expect(jobs).toHaveLength(2)
+        expect(jobs.map((j) => j.name).sort()).toEqual(['alpha', 'beta'])
+      })
+
+      it('filters by minimum retry count', async () => {
+        await createTestQueue('test-queue')
+        const flakyId = await sendTestJob('test-queue', { task: 'flaky' })
+        await sendTestJob('test-queue', { task: 'fresh' })
+
+        // Manually bump retry_count to simulate a job that has been retried.
+        // We can't easily trigger the real retry flow inside a single test, but
+        // the SQL check is just retry_count >= N regardless of how it got there.
+        const { Pool } = pg
+        const pool = new Pool({ connectionString: ctx.connectionString })
+        try {
+          await pool.query(`UPDATE ${ctx.schema}.job SET retry_count = 2 WHERE id = $1`, [flakyId])
+        } finally {
+          await pool.end()
+        }
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, { limit: L, minRetries: 1 })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(flakyId)
+      })
+
+      it('filters by data containment with object payload', async () => {
+        await createTestQueue('test-queue')
+        const sessionId = '6dff4e1b-9c74-4d53-9969-1991d887e7ca'
+        const targetId = await sendTestJob('test-queue', { sessionId, extension: 'webm' })
+        await sendTestJob('test-queue', { sessionId: 'something-else', extension: 'webm' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, {
+          limit: L,
+          data: { sessionId },
+        })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(targetId)
+      })
+
+      it('filters by output containment', async () => {
+        await createTestQueue('test-queue')
+        await sendTestJob('test-queue', { task: 'one' })
+        await sendTestJob('test-queue', { task: 'two' })
+
+        const fetched1 = await fetchTestJob('test-queue')
+        const fetched2 = await fetchTestJob('test-queue')
+        if (!fetched1 || !fetched2) throw new Error('expected fetched jobs')
+
+        await completeTestJob('test-queue', fetched1.id, { status: 'ok' })
+        await completeTestJob('test-queue', fetched2.id, { status: 'fail' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, {
+          limit: L,
+          state: 'all',
+          output: { status: 'ok' },
+        })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(fetched1.id)
+      })
+
+      it('filters by output containment for primitive return values (wrapped as {value})', async () => {
+        await createTestQueue('test-queue')
+        await sendTestJob('test-queue', { task: 'one' })
+        await sendTestJob('test-queue', { task: 'two' })
+
+        const fetched1 = await fetchTestJob('test-queue')
+        const fetched2 = await fetchTestJob('test-queue')
+        if (!fetched1 || !fetched2) throw new Error('expected fetched jobs')
+
+        // pg-boss wraps primitive output as {"value": x} (manager.ts
+        // mapCompletionDataArg). The dashboard relies on this so users can
+        // filter by `value=42` and still find jobs whose handler returned 42.
+        await completeTestJob('test-queue', fetched1.id, 42 as unknown as object)
+        await completeTestJob('test-queue', fetched2.id, 99 as unknown as object)
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, {
+          limit: L,
+          state: 'all',
+          output: { value: 42 },
+        })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(fetched1.id)
+      })
+
+      it('combines multiple filters with AND', async () => {
+        await createTestQueue('queue-a')
+        await createTestQueue('queue-b')
+        const targetId = await sendTestJob('queue-a', { sessionId: 'abc', priority: 'high' })
+        await sendTestJob('queue-a', { sessionId: 'def', priority: 'high' })
+        await sendTestJob('queue-b', { sessionId: 'abc', priority: 'high' })
+
+        const jobs = (await getRecentJobs(ctx.connectionString, ctx.schema, {
+          limit: L,
+          queues: ['queue-a'],
+          data: { sessionId: 'abc' },
+        })).rows
+        expect(jobs).toHaveLength(1)
+        expect(jobs[0].id).toBe(targetId)
+      })
+    })
+  })
+
+  describe('getQueueNames', () => {
+    it('returns an empty list when no queues exist', async () => {
+      const names = await getQueueNames(ctx.connectionString, ctx.schema)
+      expect(names).toEqual([])
+    })
+
+    it('returns queue names sorted alphabetically', async () => {
+      await createTestQueue('charlie')
+      await createTestQueue('alpha')
+      await createTestQueue('bravo')
+
+      const names = await getQueueNames(ctx.connectionString, ctx.schema)
+      expect(names).toEqual(['alpha', 'bravo', 'charlie'])
+    })
+  })
+
+  describe('getJobs', () => {
+    it('returns empty array when no jobs exist', async () => {
+      await createTestQueue('empty-queue')
+
+      const jobs = (await getJobs(ctx.connectionString, ctx.schema, 'empty-queue', { limit: L })).rows
+      expect(jobs).toEqual([])
+    })
+
+    it('returns jobs for a queue', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'one' })
+      await sendTestJob('test-queue', { task: 'two' })
+
+      const jobs = (await getJobs(ctx.connectionString, ctx.schema, 'test-queue', { limit: L })).rows
+
+      expect(jobs).toHaveLength(2)
+    })
+
+    it('includes custom job column projections', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { tenantId: 'acme' })
+
+      const jobs = (await getJobs(ctx.connectionString, ctx.schema, 'test-queue', {
+        limit: L,
+        jobColumns: [
+          { path: 'id', name: 'ID' },
+          { path: 'data.tenantId', name: 'Tenant' },
+        ],
+      })).rows
+
+      expect(jobs).toHaveLength(1)
+      expect((jobs[0] as Record<string, unknown>)['data.tenantId']).toBe('acme')
+    })
+
+    it('filters jobs by state', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'created' })
+      await sendTestJob('test-queue', { task: 'will-be-active' })
+      await sendTestJob('test-queue', { task: 'will-be-completed' })
+
+      // Fetch makes a job active - fetch returns the job with its ID
+      const fetchedJob1 = await fetchTestJob('test-queue')
+      const fetchedJob2 = await fetchTestJob('test-queue')
+
+      // Complete one of the fetched (active) jobs
+      if (fetchedJob2) {
+        await completeTestJob('test-queue', fetchedJob2.id)
+      }
+
+      const activeJobs = (await getJobs(ctx.connectionString, ctx.schema, 'test-queue', {
+        limit: L,
+        state: 'active',
+      })).rows
+
+      // One of the fetched jobs should still be active (the one not completed)
+      expect(activeJobs).toHaveLength(1)
+      expect(activeJobs[0].state).toBe('active')
+      expect(activeJobs[0].id).toBe(fetchedJob1?.id)
+    })
+
+    it('filters by pending state (non-completed jobs)', async () => {
+      await createTestQueue('test-queue')
+      await sendTestJob('test-queue', { task: 'created' })
+      await sendTestJob('test-queue', { task: 'will-be-completed' })
+
+      const fetchedJob = await fetchTestJob('test-queue')
+      if (fetchedJob) {
+        await completeTestJob('test-queue', fetchedJob.id)
+      }
+
+      const pendingJobs = (await getJobs(ctx.connectionString, ctx.schema, 'test-queue', {
+        limit: L,
+        state: 'pending',
+      })).rows
+
+      // Should only return non-completed jobs
+      expect(pendingJobs.length).toBeGreaterThan(0)
+      pendingJobs.forEach(job => {
+        expect(job.state).not.toBe('completed')
+      })
+    })
+
+    it('paginates jobs', async () => {
+      await createTestQueue('test-queue')
+      for (let i = 0; i < 5; i++) {
+        await sendTestJob('test-queue', { index: i })
+      }
+
+      const page1 = await getJobs(ctx.connectionString, ctx.schema, 'test-queue', { limit: 2 })
+      const page2 = await getJobs(ctx.connectionString, ctx.schema, 'test-queue', {
+        limit: 2,
+        cursor: { after: page1.nextCursor },
+      })
+      const page3 = await getJobs(ctx.connectionString, ctx.schema, 'test-queue', {
+        limit: 2,
+        cursor: { after: page2.nextCursor },
+      })
+
+      expect(page1.rows).toHaveLength(2)
+      expect(page2.rows).toHaveLength(2)
+      expect(page3.rows).toHaveLength(1)
+      expect(page3.hasNextPage).toBe(false)
+      expect(new Set([...page1.rows, ...page2.rows, ...page3.rows].map(j => j.id)).size).toBe(5)
+    })
+  })
+
+  describe('getJobCountFromQueue', () => {
+    it('returns totalCount when no filter', () => {
+      const queue = { totalCount: 100, activeCount: 10, queuedCount: 50 } as any
+      expect(getJobCountFromQueue(queue, null)).toBe(100)
+    })
+
+    it('returns activeCount for active filter', () => {
+      const queue = { totalCount: 100, activeCount: 10, queuedCount: 50 } as any
+      expect(getJobCountFromQueue(queue, 'active')).toBe(10)
+    })
+
+    it('returns queuedCount + activeCount for pending filter', () => {
+      const queue = { totalCount: 100, activeCount: 10, queuedCount: 50 } as any
+      expect(getJobCountFromQueue(queue, 'pending')).toBe(60)
+    })
+
+    it('returns null for states without cached counts', () => {
+      const queue = { totalCount: 100, activeCount: 10, queuedCount: 50 } as any
+      expect(getJobCountFromQueue(queue, 'completed')).toBeNull()
+      expect(getJobCountFromQueue(queue, 'failed')).toBeNull()
+      expect(getJobCountFromQueue(queue, 'cancelled')).toBeNull()
+    })
+
+    it('returns null for created/retry (ambiguous in queuedCount)', () => {
+      const queue = { totalCount: 100, activeCount: 10, queuedCount: 50 } as any
+      expect(getJobCountFromQueue(queue, 'created')).toBeNull()
+      expect(getJobCountFromQueue(queue, 'retry')).toBeNull()
+    })
+  })
+
+  describe('getJob', () => {
+    it('returns null when job does not exist', async () => {
+      await createTestQueue('test-queue')
+
+      const job = await getJobById(
+        ctx.connectionString,
+        ctx.schema,
+        'test-queue',
+        '00000000-0000-0000-0000-000000000000'
+      )
+      expect(job).toBeNull()
+    })
+
+    it('returns job by id with full data', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { foo: 'bar' }, { priority: 5 })
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(job).not.toBeNull()
+      expect(job!.id).toBe(jobId)
+      expect(job!.priority).toBe(5)
+      expect(job!.data).toEqual({ foo: 'bar' })
+    })
+
+    it('returns null source-tracking fields for a job that was not dead-lettered', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { foo: 'bar' })
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(job!.sourceName).toBeNull()
+      expect(job!.sourceId).toBeNull()
+      expect(job!.sourceCreatedOn).toBeNull()
+      expect(job!.sourceRetryCount).toBeNull()
+    })
+
+    it('exposes source-tracking fields for a dead-lettered job', async () => {
+      await createTestQueue('test-dlq')
+      await createTestQueue('test-queue', { deadLetter: 'test-dlq', retryLimit: 0 })
+
+      const jobId = await sendTestJob('test-queue', { foo: 'bar' })
+
+      // fail() routes the job to the dead letter queue synchronously
+      await fetchTestJob('test-queue')
+      await failTestJob('test-queue', jobId!, new Error('card declined'))
+
+      // The dead-lettered copy is a new job in the DLQ with its own id
+      const moved = await fetchTestJob('test-dlq')
+      const dlqJob = await getJobById(ctx.connectionString, ctx.schema, 'test-dlq', moved!.id)
+
+      expect(dlqJob).not.toBeNull()
+      expect(dlqJob!.sourceName).toBe('test-queue')
+      expect(dlqJob!.sourceId).toBe(jobId)
+      expect(dlqJob!.sourceCreatedOn).toBeTruthy()
+      expect(dlqJob!.sourceRetryCount).toBe(0)
+      // The reason it was dead-lettered travels as sourceOutput; the copy's own output starts empty.
+      expect((dlqJob!.sourceOutput as { message: string }).message).toBe('card declined')
+      expect(dlqJob!.output).toBeNull()
+    })
+  })
+})
+
+describe('Job Actions', () => {
+  describe('cancelJob', () => {
+    it('cancels a created job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      const result = await cancelJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(1)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('cancelled')
+    })
+
+    it('does not cancel a completed job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      // Use pg-boss to complete the job
+      await fetchTestJob('test-queue')
+      await completeTestJob('test-queue', jobId!)
+
+      const result = await cancelJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(0)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('completed')
+    })
+
+    it('returns 0 for non-existent job', async () => {
+      await createTestQueue('test-queue')
+
+      const result = await cancelJob(
+        ctx.connectionString,
+        ctx.schema,
+        'test-queue',
+        '00000000-0000-0000-0000-000000000000'
+      )
+
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('retryJob', () => {
+    it('retries a failed job', async () => {
+      // Use retryLimit: 0 so job goes directly to 'failed' state when fail() is called
+      await createTestQueue('test-queue', { retryLimit: 0 })
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      // Use pg-boss to fail the job
+      await fetchTestJob('test-queue')
+      await failTestJob('test-queue', jobId!, new Error('test failure'))
+
+      const result = await retryJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(1)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('retry')
+    })
+
+    it('adds one attempt and keeps the start time, so the next run is counted', async () => {
+      await createTestQueue('test-queue', { retryLimit: 0 })
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+      await fetchTestJob('test-queue')
+      await failTestJob('test-queue', jobId!, new Error('test failure'))
+
+      await retryJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      const retried = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(retried!.retryLimit).toBe(1)
+      expect(retried!.startedOn).not.toBeNull()
+
+      await fetchTestJob('test-queue')
+      const running = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(running!.retryCount).toBe(1)
+    })
+
+    it('does not retry a non-failed job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      const result = await retryJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(0)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('created')
+    })
+  })
+
+  describe('deleteJob', () => {
+    it('deletes a job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      const result = await deleteJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(1)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job).toBeNull()
+    })
+
+    it('does not delete active jobs', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      // Use pg-boss to make job active
+      await fetchTestJob('test-queue')
+
+      const result = await deleteJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(0)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job).not.toBeNull()
+      expect(job!.state).toBe('active')
+    })
+
+    it('returns 0 for non-existent job', async () => {
+      await createTestQueue('test-queue')
+
+      const result = await deleteJob(
+        ctx.connectionString,
+        ctx.schema,
+        'test-queue',
+        '00000000-0000-0000-0000-000000000000'
+      )
+
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('resumeJob', () => {
+    it('resumes a cancelled job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      // Cancel the job first
+      await cancelJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      const result = await resumeJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(1)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('created')
+    })
+
+    it('does not resume a non-cancelled job', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      // Job is in 'created' state, not 'cancelled'
+      const result = await resumeJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+
+      expect(result).toBe(0)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('created')
+    })
+
+    it('returns 0 for non-existent job', async () => {
+      await createTestQueue('test-queue')
+
+      const result = await resumeJob(
+        ctx.connectionString,
+        ctx.schema,
+        'test-queue',
+        '00000000-0000-0000-0000-000000000000'
+      )
+
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('concurrent operations', () => {
+    it('handles concurrent cancellation attempts gracefully', async () => {
+      await createTestQueue('test-queue')
+      const jobId = await sendTestJob('test-queue', { task: 'test' })
+
+      const [result1, result2] = await Promise.all([
+        cancelJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!),
+        cancelJob(ctx.connectionString, ctx.schema, 'test-queue', jobId!),
+      ])
+
+      // One should succeed, one should fail
+      expect(result1 + result2).toBe(1)
+
+      const job = await getJobById(ctx.connectionString, ctx.schema, 'test-queue', jobId!)
+      expect(job!.state).toBe('cancelled')
+    })
+  })
+})
+
+describe('Warning Queries', () => {
+  describe('getWarnings', () => {
+    it('returns empty array when warning table does not exist', async () => {
+      // Create a minimal schema without the warning table
+      const testSchema = 'pgboss_no_warning_table'
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`)
+      await pool.query(`CREATE SCHEMA ${testSchema}`)
+      await pool.end()
+
+      const warnings = (await getWarnings(ctx.connectionString, testSchema, { limit: L })).rows
+      expect(warnings).toEqual([])
+    })
+
+    it('returns empty array when no warnings exist', async () => {
+      const warnings = (await getWarnings(ctx.connectionString, ctx.schema, { limit: L })).rows
+      expect(warnings).toEqual([])
+    })
+
+    it('returns warnings ordered by created_on desc', async () => {
+      await insertTestWarning(ctx.schema, 'slow_query', 'First warning')
+      await insertTestWarning(ctx.schema, 'queue_backlog', 'Second warning')
+
+      const warnings = (await getWarnings(ctx.connectionString, ctx.schema, { limit: L })).rows
+
+      expect(warnings).toHaveLength(2)
+      expect(warnings[0].message).toBe('Second warning')
+      expect(warnings[1].message).toBe('First warning')
+    })
+
+    it('filters warnings by type', async () => {
+      await insertTestWarning(ctx.schema, 'slow_query', 'Slow query 1')
+      await insertTestWarning(ctx.schema, 'queue_backlog', 'Backlog 1')
+      await insertTestWarning(ctx.schema, 'slow_query', 'Slow query 2')
+
+      const warnings = (await getWarnings(ctx.connectionString, ctx.schema, {
+        limit: L,
+        type: 'slow_query',
+      })).rows
+
+      expect(warnings).toHaveLength(2)
+      expect(warnings.every((w) => w.type === 'slow_query')).toBe(true)
+    })
+
+    it('paginates warnings', async () => {
+      for (let i = 0; i < 5; i++) {
+        await insertTestWarning(ctx.schema, 'slow_query', `Warning ${i}`)
+      }
+
+      const page1 = await getWarnings(ctx.connectionString, ctx.schema, { limit: 2 })
+      const page2 = await getWarnings(ctx.connectionString, ctx.schema, {
+        limit: 2,
+        cursor: { after: page1.nextCursor },
+      })
+
+      expect(page1.rows).toHaveLength(2)
+      expect(page2.rows).toHaveLength(2)
+      expect(page2.rows.map(w => w.id)).not.toContain(page1.rows[1].id)
+    })
+  })
+
+  describe('getWarningCount', () => {
+    it('returns 0 when warning table does not exist', async () => {
+      // Create a minimal schema without the warning table
+      const testSchema = 'pgboss_no_warning_count'
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`)
+      await pool.query(`CREATE SCHEMA ${testSchema}`)
+      await pool.end()
+
+      const count = await getWarningCount(ctx.connectionString, testSchema)
+      expect(count).toEqual({ count: 0, capped: false })
+    })
+
+    it('returns 0 when no warnings exist', async () => {
+      const count = await getWarningCount(ctx.connectionString, ctx.schema)
+      expect(count).toEqual({ count: 0, capped: false })
+    })
+
+    it('returns total count', async () => {
+      await insertTestWarning(ctx.schema, 'slow_query', 'Warning 1')
+      await insertTestWarning(ctx.schema, 'queue_backlog', 'Warning 2')
+      await insertTestWarning(ctx.schema, 'clock_skew', 'Warning 3')
+
+      const count = await getWarningCount(ctx.connectionString, ctx.schema)
+      expect(count).toEqual({ count: 3, capped: false })
+    })
+
+    it('returns filtered count', async () => {
+      await insertTestWarning(ctx.schema, 'slow_query', 'Warning 1')
+      await insertTestWarning(ctx.schema, 'queue_backlog', 'Warning 2')
+      await insertTestWarning(ctx.schema, 'slow_query', 'Warning 3')
+
+      const count = await getWarningCount(ctx.connectionString, ctx.schema, 'slow_query')
+      expect(count).toEqual({ count: 2, capped: false })
+    })
+
+    it('stops at the cap', async () => {
+      for (let i = 0; i < 3; i++) await insertTestWarning(ctx.schema, 'slow_query', `m${i}`)
+
+      expect(await getWarningCount(ctx.connectionString, ctx.schema, null, 3)).toEqual({ count: 3, capped: false })
+      expect(await getWarningCount(ctx.connectionString, ctx.schema, null, 2)).toEqual({ count: 2, capped: true })
+    })
+  })
+
+  describe('getBamEntries', () => {
+    // The live test boss runs a BAM worker that claims pending/failed rows on
+    // start. Stop it first so the bam table stays exactly as the test seeds it.
+    // queries.server uses its own pool, so reads still work after the boss closes.
+    async function stopBamWorker () {
+      await getBoss().stop({ close: true })
+    }
+
+    it('returns empty array when bam table does not exist', async () => {
+      const testSchema = 'pgboss_no_bam_table'
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`)
+      await pool.query(`CREATE SCHEMA ${testSchema}`)
+      await pool.end()
+
+      const entries = (await getBamEntries(ctx.connectionString, testSchema, { limit: L })).rows
+      expect(entries).toEqual([])
+    })
+
+    it('returns empty array when no entries exist', async () => {
+      await stopBamWorker()
+      const entries = (await getBamEntries(ctx.connectionString, ctx.schema, { limit: L })).rows
+      expect(entries).toEqual([])
+    })
+
+    it('returns entries ordered by version desc', async () => {
+      await stopBamWorker()
+      await insertTestBam(ctx.schema, { name: 'idx_a', version: 26 })
+      await insertTestBam(ctx.schema, { name: 'idx_b', version: 27 })
+
+      const entries = (await getBamEntries(ctx.connectionString, ctx.schema, { limit: L })).rows
+
+      expect(entries).toHaveLength(2)
+      expect(entries[0].name).toBe('idx_b')
+      expect(entries[0].version).toBe(27)
+      expect(entries[1].name).toBe('idx_a')
+    })
+
+    it('maps table_name and timestamps to camelCase fields', async () => {
+      await stopBamWorker()
+      await insertTestBam(ctx.schema, {
+        name: 'idx_c',
+        version: 27,
+        status: 'failed',
+        queue: 'my-queue',
+        table: 'job_common',
+        error: 'boom',
+      })
+
+      const [entry] = (await getBamEntries(ctx.connectionString, ctx.schema, { limit: L })).rows
+
+      expect(entry.table).toBe('job_common')
+      expect(entry.queue).toBe('my-queue')
+      expect(entry.status).toBe('failed')
+      expect(entry.error).toBe('boom')
+      expect(entry).toHaveProperty('createdOn')
+    })
+
+    it('filters entries by status', async () => {
+      await stopBamWorker()
+      await insertTestBam(ctx.schema, { name: 'idx_d', version: 27, status: 'completed' })
+      await insertTestBam(ctx.schema, { name: 'idx_e', version: 27, status: 'failed' })
+      await insertTestBam(ctx.schema, { name: 'idx_f', version: 27, status: 'completed' })
+
+      const entries = (await getBamEntries(ctx.connectionString, ctx.schema, {
+        limit: L,
+        status: 'completed',
+      })).rows
+
+      expect(entries).toHaveLength(2)
+      expect(entries.every((e) => e.status === 'completed')).toBe(true)
+    })
+  })
+
+  describe('getBamCount', () => {
+    it('returns 0 when bam table does not exist', async () => {
+      const testSchema = 'pgboss_no_bam_count'
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`)
+      await pool.query(`CREATE SCHEMA ${testSchema}`)
+      await pool.end()
+
+      const count = await getBamCount(ctx.connectionString, testSchema)
+      expect(count).toBe(0)
+    })
+
+    it('returns total count', async () => {
+      await getBoss().stop({ close: true })
+      await insertTestBam(ctx.schema, { name: 'idx_j', version: 27, status: 'completed' })
+      await insertTestBam(ctx.schema, { name: 'idx_k', version: 27, status: 'completed' })
+      await insertTestBam(ctx.schema, { name: 'idx_l', version: 27, status: 'in_progress' })
+
+      const count = await getBamCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(3)
+    })
+
+    it('returns filtered count', async () => {
+      await getBoss().stop({ close: true })
+      await insertTestBam(ctx.schema, { name: 'idx_m', version: 27, status: 'completed' })
+      await insertTestBam(ctx.schema, { name: 'idx_n', version: 27, status: 'completed' })
+      await insertTestBam(ctx.schema, { name: 'idx_o', version: 27, status: 'in_progress' })
+
+      const count = await getBamCount(ctx.connectionString, ctx.schema, 'completed')
+      expect(count).toBe(2)
+    })
+  })
+
+  describe('getBamStatusSummary', () => {
+    it('returns empty array when bam table does not exist', async () => {
+      const testSchema = 'pgboss_no_bam_summary'
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`)
+      await pool.query(`CREATE SCHEMA ${testSchema}`)
+      await pool.end()
+
+      const summary = await getBamStatusSummary(ctx.connectionString, testSchema)
+      expect(summary).toEqual([])
+    })
+
+    it('returns counts grouped by status', async () => {
+      await getBoss().stop({ close: true })
+      await insertTestBam(ctx.schema, { name: 'idx_g', version: 27, status: 'pending' })
+      await insertTestBam(ctx.schema, { name: 'idx_h', version: 27, status: 'pending' })
+      await insertTestBam(ctx.schema, { name: 'idx_i', version: 27, status: 'failed' })
+
+      const summary = await getBamStatusSummary(ctx.connectionString, ctx.schema)
+      const byStatus = Object.fromEntries(summary.map((s) => [s.status, s.count]))
+
+      expect(byStatus.pending).toBe(2)
+      expect(byStatus.failed).toBe(1)
+    })
+  })
+})
+
+describe('Validation', () => {
+  describe('isValidIntent', () => {
+    it('returns true for valid intents', () => {
+      expect(isValidIntent('cancel')).toBe(true)
+      expect(isValidIntent('retry')).toBe(true)
+      expect(isValidIntent('delete')).toBe(true)
+      expect(isValidIntent('resume')).toBe(true)
+    })
+
+    it('returns false for invalid intents', () => {
+      expect(isValidIntent('invalid')).toBe(false)
+      expect(isValidIntent('')).toBe(false)
+      expect(isValidIntent(null)).toBe(false)
+      expect(isValidIntent(undefined)).toBe(false)
+      expect(isValidIntent(123)).toBe(false)
+    })
+  })
+
+  describe('schema validation', () => {
+    it('throws on invalid schema name', async () => {
+      await expect(
+        getQueueNames(ctx.connectionString, 'invalid; DROP TABLE users;--')
+      ).rejects.toThrow('Invalid identifier')
+    })
+
+    it('allows valid schema names', async () => {
+      const queues = await getQueueNames(ctx.connectionString, ctx.schema)
+      expect(queues).toEqual([])
+    })
+  })
+})
+
+describe('Schedule Queries', () => {
+  describe('getSchedules', () => {
+    it('returns empty array when no schedules exist', async () => {
+      const schedules = (await getSchedules(ctx.connectionString, ctx.schema, { limit: L })).rows
+      expect(schedules).toEqual([])
+    })
+
+    it('returns schedules ordered by name and key', async () => {
+      await createTestQueue('schedule-b')
+      await createTestQueue('schedule-a')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['schedule-b', 'key1', '0 * * * *', 'UTC', '{}', '{}']
+      )
+      await pool.query(
+        `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['schedule-a', 'key1', '0 * * * *', 'UTC', '{}', '{}']
+      )
+      await pool.end()
+
+      const schedules = (await getSchedules(ctx.connectionString, ctx.schema, { limit: L })).rows
+
+      expect(schedules).toHaveLength(2)
+      expect(schedules[0].name).toBe('schedule-a')
+      expect(schedules[1].name).toBe('schedule-b')
+    })
+
+    it('pages with a cursor', async () => {
+      for (let i = 0; i < 5; i++) {
+        await createTestQueue(`schedule-${i}`)
+      }
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      for (let i = 0; i < 5; i++) {
+        await pool.query(
+          `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [`schedule-${i}`, 'key1', '0 * * * *', 'UTC', '{}', '{}']
+        )
+      }
+      await pool.end()
+
+      const page1 = await getSchedules(ctx.connectionString, ctx.schema, { limit: 2 })
+      expect(page1.rows.map(s => s.name)).toEqual(['schedule-0', 'schedule-1'])
+
+      const page2 = await getSchedules(ctx.connectionString, ctx.schema, { limit: 2, cursor: { after: page1.nextCursor } })
+      expect(page2.rows.map(s => s.name)).toEqual(['schedule-2', 'schedule-3'])
+    })
+  })
+
+  describe('getScheduleCount', () => {
+    it('returns 0 when no schedules exist', async () => {
+      const count = await getScheduleCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(0)
+    })
+
+    it('returns correct count', async () => {
+      for (let i = 0; i < 3; i++) {
+        await createTestQueue(`schedule-${i}`)
+      }
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      for (let i = 0; i < 3; i++) {
+        await pool.query(
+          `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [`schedule-${i}`, 'key1', '0 * * * *', 'UTC', '{}', '{}']
+        )
+      }
+      await pool.end()
+
+      const count = await getScheduleCount(ctx.connectionString, ctx.schema)
+      expect(count).toBe(3)
+    })
+  })
+
+  describe('getSchedule', () => {
+    it('returns null when schedule does not exist', async () => {
+      const schedule = await getSchedule(ctx.connectionString, ctx.schema, 'nonexistent', 'key1')
+      expect(schedule).toBeNull()
+    })
+
+    it('returns schedule by name and key', async () => {
+      await createTestQueue('my-schedule')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['my-schedule', 'my-key', '0 */2 * * *', 'America/New_York', '{"foo":"bar"}', '{}']
+      )
+      await pool.end()
+
+      const schedule = await getSchedule(ctx.connectionString, ctx.schema, 'my-schedule', 'my-key')
+
+      expect(schedule).not.toBeNull()
+      expect(schedule!.name).toBe('my-schedule')
+      expect(schedule!.key).toBe('my-key')
+      expect(schedule!.cron).toBe('0 */2 * * *')
+      expect(schedule!.timezone).toBe('America/New_York')
+    })
+
+    it('reads the kind and last job of a recurrence rule', async () => {
+      await createTestQueue('rule-schedule')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      const jobId = '11111111-2222-3333-4444-555555555555'
+      await pool.query(
+        `INSERT INTO ${ctx.schema}.schedule (name, key, kind, cron, timezone, data, options, last_job_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        ['rule-schedule', '', 'rrule', 'FREQ=DAILY;BYHOUR=9', 'UTC', '{}', '{}', jobId]
+      )
+      await pool.end()
+
+      const schedule = await getSchedule(ctx.connectionString, ctx.schema, 'rule-schedule', '')
+
+      expect(schedule!.kind).toBe('rrule')
+      expect(schedule!.cron).toBe('FREQ=DAILY;BYHOUR=9')
+      expect(schedule!.lastJobId).toBe(jobId)
+    })
+
+    it('leaves kind and lastJobId undefined on a database without the v41 columns', async () => {
+      await createTestQueue('old-schedule')
+
+      const pool = new Pool({ connectionString: ctx.connectionString })
+      await pool.query(
+        `INSERT INTO ${ctx.schema}.schedule (name, key, cron, timezone, data, options) VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['old-schedule', '', '0 * * * *', 'UTC', '{}', '{}']
+      )
+      // What a schema older than v41 looks like to the read: the columns the pass writes are simply
+      // not there, and the query has to come back with the rest of the row rather than an error.
+      await pool.query(`ALTER TABLE ${ctx.schema}.schedule DROP COLUMN kind, DROP COLUMN last_job_id`)
+      await pool.end()
+      clearScheduleColumnsCache()
+
+      const [listed] = (await getSchedules(ctx.connectionString, ctx.schema, { limit: L })).rows
+      const one = await getSchedule(ctx.connectionString, ctx.schema, 'old-schedule', '')
+
+      expect(listed.cron).toBe('0 * * * *')
+      expect(listed.kind).toBeUndefined()
+      expect(listed.lastJobId).toBeUndefined()
+      expect(one!.kind).toBeUndefined()
+      expect(one!.lastJobId).toBeUndefined()
+
+      clearScheduleColumnsCache()
+    })
+  })
+})

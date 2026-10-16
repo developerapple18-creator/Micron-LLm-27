@@ -1,0 +1,15 @@
+node_modules/
+tmp/
+.pnpm-store/
+.conversation/
+.config/
+dist/
+generated-artifacts/
+legal-candidates/
+lib/legal-contracts/
+pnpm-lock.yaml
+engineering/javascript-migration-inventory.json
+**/test-artifacts/
+**/.replit-artifact/
+**/.generated/
+*.drawio.html

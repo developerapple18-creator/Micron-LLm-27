@@ -1,0 +1,778 @@
+import type * as types from './types.js'
+import { scheduleKinds, scheduleMissedPolicies } from 'pg-boss'
+import { z } from 'zod'
+
+// ============== Base Types ==============
+export const jsonRecordSchema: z.ZodType<types.HttpJsonRecord> = z.record(z.string(), z.unknown())
+
+export const nullableJsonRecordSchema: z.ZodType<types.HttpNullableJsonRecord> = jsonRecordSchema.nullable()
+
+export const dateInputSchema: z.ZodType<types.HttpDateInput> = z.union([z.string(), z.number()])
+
+export const queueNameSchema: z.ZodType<types.HttpQueueName> = z.string().min(1)
+
+export const eventNameSchema: z.ZodType<types.HttpEventName> = z.string().min(1)
+
+export const errorResultSchema: z.ZodType<types.HttpErrorResult> = z.object({
+  ok: z.literal(false),
+  error: z.object({
+    message: z.string()
+  })
+})
+
+export const htmlResponseSchema: z.ZodType<types.HttpHtmlResponse> = z.string()
+
+// ============== pg-boss Types ==============
+
+export const groupOptionsSchema = z.object({
+  id: z.string(),
+  tier: z.string().optional()
+}) satisfies z.ZodType<types.HttpGroupOptions>
+
+export const groupConcurrencyConfigSchema = z.object({
+  default: z.number(),
+  tiers: z.record(z.string(), z.number()).optional()
+}) satisfies z.ZodType<types.HttpGroupConcurrencyConfig>
+
+const sendOptionsSchemaBase = z.object({
+  id: z.string().optional(),
+  priority: z.number().optional(),
+  startAfter: dateInputSchema.optional(),
+  singletonKey: z.string().optional(),
+  singletonSeconds: z.number().optional(),
+  singletonNextSlot: z.boolean().optional(),
+  group: groupOptionsSchema.optional(),
+  deadLetter: z.string().optional(),
+  expireInSeconds: z.number().optional(),
+  retentionSeconds: z.number().optional(),
+  deleteAfterSeconds: z.number().optional(),
+  retryLimit: z.number().optional(),
+  retryDelay: z.number().optional(),
+  retryBackoff: z.boolean().optional(),
+  retryDelayMax: z.number().optional(),
+  heartbeatSeconds: z.number().optional(),
+})
+
+export const sendOptionsSchema = sendOptionsSchemaBase satisfies z.ZodType<types.HttpSendOptions>
+
+export const queueOptionsSchema = z.object({
+  expireInSeconds: z.number().optional(),
+  retentionSeconds: z.number().optional(),
+  deleteAfterSeconds: z.number().optional(),
+  retryLimit: z.number().optional(),
+  retryDelay: z.number().optional(),
+  retryBackoff: z.boolean().optional(),
+  retryDelayMax: z.number().optional(),
+  heartbeatSeconds: z.number().optional(),
+}) satisfies z.ZodType<types.HttpQueueOptions>
+
+// Curated subset of send options accepted by update()/upsert(): partial edits exclude the
+// throttle/debounce options (singletonSeconds, singletonNextSlot) and add match.
+export const updateOptionsSchema = z.object({
+  id: z.string().optional(),
+  priority: z.number().optional(),
+  startAfter: dateInputSchema.optional(),
+  singletonKey: z.string().optional(),
+  group: groupOptionsSchema.optional(),
+  deadLetter: z.string().optional(),
+  expireInSeconds: z.number().optional(),
+  retentionSeconds: z.number().optional(),
+  deleteAfterSeconds: z.number().optional(),
+  retryLimit: z.number().optional(),
+  retryDelay: z.number().optional(),
+  retryBackoff: z.boolean().optional(),
+  retryDelayMax: z.number().optional(),
+  heartbeatSeconds: z.number().optional(),
+  match: z.enum(['newest', 'oldest', 'all']).optional(),
+}) satisfies z.ZodType<types.HttpUpdateOptions>
+
+// missed and the kind enum below both come from the core's own exported constants, so a policy or
+// kind added there widens the contract (and the generated OpenAPI enum) without an edit here.
+export const scheduleOptionsSchema = sendOptionsSchemaBase.extend({
+  tz: z.string().optional(),
+  key: z.string().optional(),
+  missed: z.enum(scheduleMissedPolicies).optional(),
+}) satisfies z.ZodType<types.HttpScheduleOptions>
+
+export const fetchOptionsSchema = z.object({
+  includeMetadata: z.boolean().optional(),
+  priority: z.boolean().optional(),
+  orderByCreatedOn: z.boolean().optional(),
+  batchSize: z.number().optional(),
+  ignoreStartAfter: z.boolean().optional(),
+  groupConcurrency: z.union([z.number(), groupConcurrencyConfigSchema]).optional(),
+  ignoreGroups: z.array(z.string()).nullable().optional(),
+  minPriority: z.number().int().optional(),
+  maxPriority: z.number().int().optional(),
+}).refine(
+  data => data.minPriority == null || data.maxPriority == null || data.minPriority <= data.maxPriority,
+  { message: 'minPriority must be <= maxPriority' }
+) satisfies z.ZodType<types.HttpFetchOptions>
+
+// Any spelling the uuid type accepts, as pg-boss checks a list read's after: a hyphen only after a
+// group of four hex digits, and braces only as a pair around the whole. No `i` flag: the OpenAPI
+// document would keep it as text after the `$`, and that pattern matches nothing.
+export const UUID_INPUT = /^(?:\{[0-9a-fA-F]{4}(?:-?[0-9a-fA-F]{4}){7}\}|[0-9a-fA-F]{4}(?:-?[0-9a-fA-F]{4}){7})$/
+
+// The bounds core asserts on limit and after.
+export const findJobsOptionsSchema = z.object({
+  id: z.string().optional(),
+  key: z.string().optional(),
+  data: jsonRecordSchema.optional(),
+  queued: z.boolean().optional(),
+  limit: z.number().int().min(1).max(100000).optional(),
+  after: z.string().regex(UUID_INPUT, 'must be a uuid').optional(),
+}) satisfies z.ZodType<types.HttpFindJobsOptions>
+
+// Shared by redrive and previewRedrive, which take the same filter and a limit. createdBefore
+// travels as an ISO string and becomes the Date the option type expects.
+const redriveFilterShape = {
+  destination: queueNameSchema.optional(),
+  sourceName: queueNameSchema.optional(),
+  data: jsonRecordSchema.optional(),
+  createdBefore: z.iso.datetime().transform((val) => new Date(val)).optional(),
+  ids: z.array(z.string()).optional(),
+}
+
+// The same bounds core asserts, so an out-of-range limit is a 400 rather than a 500.
+export const redriveOptionsSchema = z.object({
+  ...redriveFilterShape,
+  limit: z.number().int().min(1).optional(),
+}) satisfies z.ZodType<types.HttpRedriveOptions>
+
+export const redrivePreviewOptionsSchema = z.object({
+  ...redriveFilterShape,
+  limit: z.number().int().min(1).max(100000).optional(),
+}) satisfies z.ZodType<types.HttpRedrivePreviewOptions>
+
+export const insertOptionsSchema = z.object({
+  returnId: z.boolean().optional(),
+}) satisfies z.ZodType<types.HttpInsertOptions>
+
+export const completeOptionsSchema = z.object({
+  includeQueued: z.boolean().optional(),
+}) satisfies z.ZodType<types.HttpCompleteOptions>
+
+export const jobInsertSchema = z.object({
+  id: z.string().optional(),
+  data: jsonRecordSchema.optional(),
+  priority: z.number().optional(),
+  retryLimit: z.number().optional(),
+  retryDelay: z.number().optional(),
+  retryBackoff: z.boolean().optional(),
+  retryDelayMax: z.number().optional(),
+  startAfter: dateInputSchema.optional(),
+  singletonKey: z.string().optional(),
+  singletonSeconds: z.number().optional(),
+  expireInSeconds: z.number().optional(),
+  deleteAfterSeconds: z.number().optional(),
+  retentionSeconds: z.number().optional(),
+  heartbeatSeconds: z.number().optional(),
+  group: groupOptionsSchema.optional(),
+  deadLetter: z.string().optional(),
+}) satisfies z.ZodType<types.HttpJobInsert>
+
+export const flowJobSchema = z.object({
+  ref: z.string(),
+  name: queueNameSchema,
+  data: jsonRecordSchema.optional(),
+  options: jobInsertSchema.omit({ data: true }).optional(),
+  dependsOn: z.array(z.string()).optional(),
+}) satisfies z.ZodType<types.HttpFlowJob>
+
+const jobSchemaBase = z.object({
+  id: z.string(),
+  name: z.string(),
+  data: jsonRecordSchema,
+  retryCount: z.number(),
+  expireInSeconds: z.number(),
+  heartbeatSeconds: z.number().nullable(),
+  groupId: z.string().optional().nullable(),
+  groupTier: z.string().optional().nullable(),
+})
+
+export const jobSchema = jobSchemaBase satisfies z.ZodType<types.HttpJob>
+
+export const jobWithMetadataSchema = jobSchemaBase.extend({
+  priority: z.number(),
+  state: z.enum(['created', 'retry', 'active', 'completed', 'cancelled', 'failed']),
+  retryLimit: z.number(),
+  retryDelay: z.number(),
+  retryBackoff: z.boolean(),
+  retryDelayMax: z.number().optional(),
+  startAfter: z.iso.datetime().transform((val) => new Date(val)),
+  startedOn: z.iso.datetime().transform((val) => new Date(val)),
+  singletonKey: z.string().nullable(),
+  singletonOn: z.string().nullable(),
+  deleteAfterSeconds: z.number(),
+  createdOn: z.iso.datetime().transform((val) => new Date(val)),
+  completedOn: z.iso.datetime().nullable().transform((val) => val ? new Date(val) : null),
+  keepUntil: z.iso.datetime().transform((val) => new Date(val)),
+  blocked: z.boolean(),
+  blocking: z.boolean(),
+  pendingDependencies: z.number(),
+  policy: z.string(),
+  deadLetter: z.string(),
+  output: jsonRecordSchema,
+  sourceName: z.string().nullable(),
+  sourceId: z.string().nullable(),
+  sourceCreatedOn: z.iso.datetime().nullable().transform((val) => val ? new Date(val) : null),
+  sourceRetryCount: z.number().nullable(),
+  sourceOutput: jsonRecordSchema.nullable(),
+  sourceRootId: z.string().nullable(),
+}) satisfies z.ZodType<types.HttpJobWithMetadata>
+
+export const commandResponseSchema = z.object({
+  jobs: z.array(z.string()),
+  requested: z.number(),
+  affected: z.number(),
+  settled: z.array(z.string()).optional(),
+}) satisfies z.ZodType<types.HttpCommandResponse>
+
+export const updateResultSchema = z.object({
+  jobs: z.array(z.string()),
+  updated: z.number(),
+}) satisfies z.ZodType<types.HttpUpdateResult>
+
+export const upsertResultSchema = z.object({
+  jobs: z.array(z.string()),
+  updated: z.number(),
+  inserted: z.number(),
+}) satisfies z.ZodType<types.HttpUpsertResult>
+
+export const dependencyRefSchema = z.object({
+  name: z.string(),
+  id: z.string(),
+}) satisfies z.ZodType<types.HttpDependencyRef>
+
+export const queueResultSchema = z.object({
+  name: z.string(),
+  expireInSeconds: z.number().optional(),
+  retentionSeconds: z.number().optional(),
+  deleteAfterSeconds: z.number().optional(),
+  retryLimit: z.number().optional(),
+  retryDelay: z.number().optional(),
+  retryBackoff: z.boolean().optional(),
+  retryDelayMax: z.number().optional(),
+  policy: z.string().optional(),
+  partition: z.boolean().optional(),
+  deadLetter: z.string().optional(),
+  warningQueueSize: z.number().optional(),
+  heartbeatSeconds: z.number().optional(),
+  notify: z.boolean().optional(),
+  deferredCount: z.number(),
+  blockedCount: z.number(),
+  queuedCount: z.number(),
+  readyCount: z.number(),
+  activeCount: z.number(),
+  failedCount: z.number(),
+  totalCount: z.number(),
+  completedDelta: z.number(),
+  failedDelta: z.number(),
+  createdDelta: z.number(),
+  deltaSeconds: z.number().nullable(),
+  deltaOn: z.iso.datetime().nullable().transform((val) => val ? new Date(val) : null),
+  waitBins: z.array(z.number()).nullable(),
+  runBins: z.array(z.number()).nullable(),
+  readyOldestSeconds: z.number().nullable(),
+  table: z.string(),
+  createdOn: z.iso.datetime().transform((val) => new Date(val)),
+  updatedOn: z.iso.datetime().transform((val) => new Date(val)),
+  singletonsActive: z.array(z.string()).nullable(),
+}) satisfies z.ZodType<types.HttpQueueResult>
+
+export const scheduleSchema = z.object({
+  name: z.string(),
+  key: z.string(),
+  kind: z.enum(scheduleKinds),
+  cron: z.string(),
+  timezone: z.string(),
+  data: jsonRecordSchema.optional(),
+  // The stored blob is what schedule() was given, so tz, key and missed are in it as well. Parsing
+  // it as send options alone would strip all three out of every schedule read back.
+  options: scheduleOptionsSchema.optional(),
+  createdOn: z.iso.datetime().transform((val) => new Date(val)),
+  updatedOn: z.iso.datetime().transform((val) => new Date(val)),
+  lastJobId: z.string().nullable(),
+}) satisfies z.ZodType<types.HttpSchedule>
+
+export const bamStatusSummarySchema = z.object({
+  status: z.enum(['pending', 'in_progress', 'completed', 'failed']),
+  count: z.number(),
+  lastCreatedOn: z.iso.datetime().transform((val) => new Date(val)),
+}) satisfies z.ZodType<types.HttpBamStatusSummary>
+
+// ============== Request/Response Types ==============
+
+export const metaResultSchema: z.ZodType<types.HttpMetaResult> = z.object({
+  states: z.record(z.string(), z.string()),
+  policies: z.record(z.string(), z.string()),
+  events: z.record(z.string(), z.string()),
+  // The schedule enumerations joined the meta payload with the 12.31 schedule work, so a client can
+  // populate a kind or missed-policy selector from the running core instead of hardcoding both.
+  scheduleKinds: z.record(z.string(), z.string()),
+  scheduleMissedPolicies: z.record(z.string(), z.string())
+})
+
+export const metaResponseSchema: z.ZodType<types.HttpMetaResponse> = z.object({
+  ok: z.literal(true),
+  result: metaResultSchema
+})
+
+export const sendRequestSchema: z.ZodType<types.HttpSendRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: sendOptionsSchema.optional()
+})
+
+export const sendResponseSchema: z.ZodType<types.HttpSendResponse> = z.object({
+  ok: z.literal(true),
+  result: z.string().nullable()
+})
+
+export const sendAfterRequestSchema: z.ZodType<types.HttpSendAfterRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: sendOptionsSchema.optional().nullable(),
+  after: dateInputSchema
+})
+
+export const sendAfterResponseSchema: z.ZodType<types.HttpSendAfterResponse> = z.object({
+  ok: z.literal(true),
+  result: z.string().nullable()
+})
+
+export const sendThrottledRequestSchema: z.ZodType<types.HttpSendThrottledRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: sendOptionsSchema.optional().nullable(),
+  seconds: z.number(),
+  key: z.string().optional()
+})
+
+export const sendThrottledResponseSchema: z.ZodType<types.HttpSendThrottledResponse> = z.object({
+  ok: z.literal(true),
+  result: z.string().nullable()
+})
+
+export const sendDebouncedRequestSchema: z.ZodType<types.HttpSendDebouncedRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: sendOptionsSchema.optional().nullable(),
+  seconds: z.number(),
+  key: z.string().optional()
+})
+
+export const sendDebouncedResponseSchema: z.ZodType<types.HttpSendDebouncedResponse> = z.object({
+  ok: z.literal(true),
+  result: z.string().nullable()
+})
+
+export const insertRequestSchema: z.ZodType<types.HttpInsertRequest> = z.object({
+  name: queueNameSchema,
+  jobs: z.array(jobInsertSchema),
+  options: insertOptionsSchema.optional()
+})
+
+export const insertResponseSchema: z.ZodType<types.HttpInsertResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(z.string()).nullable()
+})
+
+// options is required: update()/upsert() must target by id or singletonKey. `data` stays
+// optional-and-nullable — an absent key leaves the payload unchanged, null clears it.
+export const updateRequestSchema: z.ZodType<types.HttpUpdateRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: updateOptionsSchema
+})
+
+export const updateResponseSchema: z.ZodType<types.HttpUpdateResponse> = z.object({
+  ok: z.literal(true),
+  result: updateResultSchema
+})
+
+export const upsertRequestSchema: z.ZodType<types.HttpUpsertRequest> = z.object({
+  name: queueNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: updateOptionsSchema
+})
+
+export const upsertResponseSchema: z.ZodType<types.HttpUpsertResponse> = z.object({
+  ok: z.literal(true),
+  result: upsertResultSchema
+})
+
+export const flowRequestSchema: z.ZodType<types.HttpFlowRequest> = z.object({
+  jobs: z.array(flowJobSchema)
+})
+
+export const flowResponseSchema: z.ZodType<types.HttpFlowResponse> = z.object({
+  ok: z.literal(true),
+  result: z.record(z.string(), z.string())
+})
+
+export const fetchRequestSchema: z.ZodType<types.HttpFetchRequest> = z.object({
+  name: queueNameSchema,
+  options: fetchOptionsSchema.optional()
+})
+
+export const fetchResponseSchema: z.ZodType<types.HttpFetchResponse> = z.object({
+  ok: z.literal(true),
+  result: z.union([z.array(jobWithMetadataSchema), z.array(jobSchema)])
+})
+
+export const subscribeRequestSchema: z.ZodType<types.HttpSubscribeRequest> = z.object({
+  event: eventNameSchema,
+  name: queueNameSchema
+})
+
+export const subscribeResponseSchema: z.ZodType<types.HttpSubscribeResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const unsubscribeRequestSchema: z.ZodType<types.HttpUnsubscribeRequest> = z.object({
+  event: eventNameSchema,
+  name: queueNameSchema
+})
+
+export const unsubscribeResponseSchema: z.ZodType<types.HttpUnsubscribeResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const publishRequestSchema: z.ZodType<types.HttpPublishRequest> = z.object({
+  event: eventNameSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: sendOptionsSchema.optional()
+})
+
+export const publishResponseSchema: z.ZodType<types.HttpPublishResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+// A fetched job, or just its id and retryCount, fences the call to that attempt (pg-boss 12.35.0)
+const jobAttemptSchema = z.object({
+  id: z.string(),
+  retryCount: z.number().int().nonnegative()
+})
+
+const jobIdOrAttemptSchema = z.union([
+  z.string(),
+  z.array(z.string()),
+  jobAttemptSchema,
+  z.array(jobAttemptSchema)
+])
+
+export const cancelRequestSchema: z.ZodType<types.HttpCancelRequest> = z.object({
+  name: queueNameSchema,
+  id: jobIdOrAttemptSchema
+})
+
+export const cancelResponseSchema: z.ZodType<types.HttpCancelResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const resumeRequestSchema: z.ZodType<types.HttpResumeRequest> = z.object({
+  name: queueNameSchema,
+  id: z.union([z.string(), z.array(z.string())])
+})
+
+export const resumeResponseSchema: z.ZodType<types.HttpResumeResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const retryRequestSchema: z.ZodType<types.HttpRetryRequest> = z.object({
+  name: queueNameSchema,
+  id: z.union([z.string(), z.array(z.string())])
+})
+
+export const retryResponseSchema: z.ZodType<types.HttpRetryResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const deleteJobRequestSchema: z.ZodType<types.HttpDeleteJobRequest> = z.object({
+  name: queueNameSchema,
+  id: jobIdOrAttemptSchema
+})
+
+export const deleteJobResponseSchema: z.ZodType<types.HttpDeleteJobResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const touchRequestSchema: z.ZodType<types.HttpTouchRequest> = z.object({
+  name: queueNameSchema,
+  id: jobIdOrAttemptSchema
+})
+
+export const touchResponseSchema: z.ZodType<types.HttpTouchResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const redriveRequestSchema: z.ZodType<types.HttpRedriveRequest> = z.object({
+  name: queueNameSchema,
+  options: redriveOptionsSchema.optional()
+})
+
+export const redriveResponseSchema: z.ZodType<types.HttpRedriveResponse> = z.object({
+  ok: z.literal(true),
+  result: z.number()
+})
+
+export const previewRedriveRequestSchema: z.ZodType<types.HttpPreviewRedriveRequest> = z.object({
+  name: queueNameSchema,
+  options: redrivePreviewOptionsSchema.optional()
+})
+
+export const previewRedriveResponseSchema: z.ZodType<types.HttpPreviewRedriveResponse> = z.object({
+  ok: z.literal(true),
+  result: z.object({
+    total: z.number(),
+    destinations: z.array(z.object({ name: z.string(), count: z.number() })),
+    unroutable: z.number()
+  })
+})
+
+export const deleteQueuedJobsRequestSchema: z.ZodType<types.HttpDeleteQueuedJobsRequest> = z.object({
+  name: queueNameSchema
+})
+
+export const deleteQueuedJobsResponseSchema: z.ZodType<types.HttpDeleteQueuedJobsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.number()
+})
+
+export const deleteStoredJobsRequestSchema: z.ZodType<types.HttpDeleteStoredJobsRequest> = z.object({
+  name: queueNameSchema
+})
+
+export const deleteStoredJobsResponseSchema: z.ZodType<types.HttpDeleteStoredJobsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.number()
+})
+
+export const deleteAllJobsRequestSchema: z.ZodType<types.HttpDeleteAllJobsRequest> = z.object({
+  name: queueNameSchema.optional()
+})
+
+export const deleteAllJobsResponseSchema: z.ZodType<types.HttpDeleteAllJobsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.number().nullable()
+})
+
+export const completeRequestSchema: z.ZodType<types.HttpCompleteRequest> = z.object({
+  name: queueNameSchema,
+  id: jobIdOrAttemptSchema,
+  data: nullableJsonRecordSchema.optional(),
+  options: completeOptionsSchema.optional()
+})
+
+export const completeResponseSchema: z.ZodType<types.HttpCompleteResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const failRequestSchema: z.ZodType<types.HttpFailRequest> = z.object({
+  name: queueNameSchema,
+  id: jobIdOrAttemptSchema,
+  data: nullableJsonRecordSchema.optional()
+})
+
+export const failResponseSchema: z.ZodType<types.HttpFailResponse> = z.object({
+  ok: z.literal(true),
+  result: commandResponseSchema
+})
+
+export const findJobsResponseSchema: z.ZodType<types.HttpFindJobsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(jobWithMetadataSchema)
+})
+
+export const getDependenciesResponseSchema: z.ZodType<types.HttpGetDependenciesResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(dependencyRefSchema)
+})
+
+export const getDependentsResponseSchema: z.ZodType<types.HttpGetDependentsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(dependencyRefSchema)
+})
+
+export const createQueueRequestSchema: z.ZodType<types.HttpCreateQueueRequest> = z.object({
+  name: queueNameSchema,
+  options: queueOptionsSchema.and(z.object({
+    policy: z.string().optional(),
+    partition: z.boolean().optional(),
+    deadLetter: z.string().optional(),
+    warningQueueSize: z.number().optional(),
+    notify: z.boolean().optional()
+  })).optional()
+})
+
+export const createQueueResponseSchema: z.ZodType<types.HttpCreateQueueResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const getBlockedKeysResponseSchema: z.ZodType<types.HttpGetBlockedKeysResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(z.string())
+})
+
+// updateQueue accepts null for the fields pg-boss allows clearing on an existing queue
+export const updateQueueRequestSchema: z.ZodType<types.HttpUpdateQueueRequest> = z.object({
+  name: queueNameSchema,
+  options: queueOptionsSchema.omit({ retryDelayMax: true, heartbeatSeconds: true }).and(z.object({
+    deadLetter: z.string().nullable().optional(),
+    retryDelayMax: z.number().nullable().optional(),
+    heartbeatSeconds: z.number().nullable().optional(),
+    warningQueueSize: z.number().optional(),
+    notify: z.boolean().optional()
+  })).optional()
+})
+
+export const updateQueueResponseSchema: z.ZodType<types.HttpUpdateQueueResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const deleteQueueRequestSchema: z.ZodType<types.HttpDeleteQueueRequest> = z.object({
+  name: queueNameSchema
+})
+
+export const deleteQueueResponseSchema: z.ZodType<types.HttpDeleteQueueResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const getQueuesResponseSchema: z.ZodType<types.HttpGetQueuesResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(queueResultSchema)
+})
+
+export const getQueueResponseSchema: z.ZodType<types.HttpGetQueueResponse> = z.object({
+  ok: z.literal(true),
+  result: queueResultSchema.nullable()
+})
+
+export const queueStatsSchema = z.object({
+  name: z.string(),
+  deferredCount: z.number(),
+  queuedCount: z.number(),
+  readyCount: z.number(),
+  activeCount: z.number(),
+  failedCount: z.number(),
+  totalCount: z.number(),
+  completedDelta: z.number().nullable(),
+  failedDelta: z.number().nullable(),
+  createdDelta: z.number().nullable(),
+  deltaSeconds: z.number().nullable(),
+  deltaOn: z.iso.datetime().nullable().transform((val) => val ? new Date(val) : null),
+  waitBins: z.array(z.number()).nullable(),
+  runBins: z.array(z.number()).nullable(),
+  readyOldestSeconds: z.number().nullable(),
+  percentiles: z.array(z.object({
+    p: z.number(),
+    waitSeconds: z.number().nullable(),
+    runSeconds: z.number().nullable()
+  })).optional(),
+  capturedOn: z.iso.datetime().transform((val) => new Date(val)),
+}) satisfies z.ZodType<types.HttpQueueStats>
+
+export const getQueueStatsResponseSchema: z.ZodType<types.HttpGetQueueStatsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(queueStatsSchema)
+})
+
+// Thresholds for the index-bloat density check behind reindex maintenance (pg-boss 12.29.0)
+export const indexBloatOptionsSchema = z.object({
+  minPages: z.number().optional(),
+  maxEntriesPerPage: z.number().optional(),
+  minSizeRatio: z.number().optional()
+}) satisfies z.ZodType<types.HttpIndexBloatOptions>
+
+export const reindexOptionsSchema = z.object({
+  minPages: z.number().optional(),
+  maxEntriesPerPage: z.number().optional(),
+  minSizeRatio: z.number().optional(),
+  force: z.boolean().optional(),
+  maxIndexBytes: z.number().optional()
+}) satisfies z.ZodType<types.HttpReindexOptions>
+
+export const superviseOptionsSchema = z.object({
+  reindex: z.union([z.boolean(), reindexOptionsSchema]).optional()
+}) satisfies z.ZodType<types.HttpSuperviseOptions>
+
+export const superviseRequestSchema: z.ZodType<types.HttpSuperviseRequest> = z.object({
+  name: queueNameSchema.optional(),
+  options: superviseOptionsSchema.optional()
+})
+
+export const superviseResponseSchema: z.ZodType<types.HttpSuperviseResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const getReindexCommandsResponseSchema: z.ZodType<types.HttpGetReindexCommandsResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(z.string())
+})
+
+export const isInstalledResponseSchema: z.ZodType<types.HttpIsInstalledResponse> = z.object({
+  ok: z.literal(true),
+  result: z.boolean()
+})
+
+export const schemaVersionResponseSchema: z.ZodType<types.HttpSchemaVersionResponse> = z.object({
+  ok: z.literal(true),
+  result: z.number().nullable()
+})
+
+export const scheduleRequestSchema: z.ZodType<types.HttpScheduleRequest> = z.object({
+  name: queueNameSchema,
+  cron: z.string(),
+  data: nullableJsonRecordSchema.optional(),
+  options: scheduleOptionsSchema.optional()
+})
+
+export const scheduleResponseSchema: z.ZodType<types.HttpScheduleResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const unscheduleRequestSchema: z.ZodType<types.HttpUnscheduleRequest> = z.object({
+  name: queueNameSchema,
+  key: z.string().optional()
+})
+
+export const unscheduleResponseSchema: z.ZodType<types.HttpUnscheduleResponse> = z.object({
+  ok: z.literal(true),
+  result: z.null()
+})
+
+export const getSchedulesResponseSchema: z.ZodType<types.HttpGetSchedulesResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(scheduleSchema)
+})
+
+export const getScheduleResponseSchema: z.ZodType<types.HttpGetScheduleResponse> = z.object({
+  ok: z.literal(true),
+  result: scheduleSchema.nullable()
+})
+
+export const previewScheduleResponseSchema: z.ZodType<types.HttpPreviewScheduleResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(z.iso.datetime().transform((val) => new Date(val)))
+})
+
+export const getBamStatusResponseSchema: z.ZodType<types.HttpGetBamStatusResponse> = z.object({
+  ok: z.literal(true),
+  result: z.array(bamStatusSummarySchema)
+})

@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "author": "خالد",
+  "license": "UNLICENSED",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "pg-boss": "12.38.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10"
+  }
+}

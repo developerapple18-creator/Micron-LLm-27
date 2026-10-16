@@ -1,0 +1,442 @@
+import { useSearchParams } from 'react-router'
+import { DbLink } from '~/components/db-link'
+import type { Route } from './+types/jobs'
+import { useCan } from '~/lib/use-capabilities'
+import {
+  getRecentJobs,
+  getQueueNames,
+  type RecentJobsFilterOptions,
+} from '~/lib/queries.server'
+import { dbContext } from '~/lib/db-context'
+import { Card, CardContent } from '~/components/ui/card'
+import { PageHeader } from '~/components/ui/page-header'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '~/components/ui/table'
+import { Pagination } from '~/components/ui/pagination'
+import { ErrorCard } from '~/components/error-card'
+import { QueryTimeoutBanner } from '~/components/query-timeout-banner'
+import { JobsFilterBar, type JobsFilters } from '~/components/jobs-filter-bar'
+import { JobColumnsEditor } from '~/components/job-columns-editor'
+import { JobColumnCell } from '~/components/job-column-cell'
+import { isQueryTimeoutError, getQueryTimeoutMs } from '~/lib/db.server'
+import type { JobResult } from '~/lib/types'
+import {
+  DEFAULT_JOB_COLUMNS,
+  defaultJobColumnsFor,
+  jobColumnsEqual,
+  parseJobColumns,
+  appendJobColumns,
+  type JobColumn,
+} from '~/lib/job-columns'
+import {
+  parsePaging,
+  pagingSearchParams,
+  isValidJobState,
+  DEFAULT_STATE_FILTER,
+  ALL_STATES_FILTER,
+  parseJsonFilterPairs,
+  jsonFilterPairsToObject,
+  jobListSortColumn,
+  type JobStateFilter,
+} from '~/lib/utils'
+
+interface ParsedFilters extends JobsFilters {
+  serverFilters: RecentJobsFilterOptions
+  hasActiveFilters: boolean
+}
+
+// Exported for tests: buildSearchParams must round-trip through this parser.
+export function parseFiltersFromUrl (searchParams: URLSearchParams): ParsedFilters {
+  const stateParam = searchParams.get('state')
+  const state: JobStateFilter = stateParam !== null && isValidJobState(stateParam)
+    ? (stateParam as JobStateFilter)
+    : DEFAULT_STATE_FILTER
+
+  const id = (searchParams.get('id') || '').trim()
+  const queuesRaw = (searchParams.get('queues') || '').trim()
+  const queues = queuesRaw ? queuesRaw.split(',').filter(Boolean) : []
+  const minRetriesRaw = (searchParams.get('minRetries') || '').trim()
+  // 0 is normalized away: retry_count >= 0 matches every job, so it would only add an empty chip.
+  const minRetries = /^\d+$/.test(minRetriesRaw) && Number(minRetriesRaw) > 0 ? minRetriesRaw : ''
+
+  const dataPairs = parseJsonFilterPairs(searchParams, 'data')
+  const outputPairs = parseJsonFilterPairs(searchParams, 'output')
+  const dataObject = jsonFilterPairsToObject(dataPairs.filter(p => p.key.trim() && p.value !== ''))
+  const outputObject = jsonFilterPairsToObject(outputPairs.filter(p => p.key.trim() && p.value !== ''))
+
+  // Drives the active filter chips.
+  const hasActiveFilters =
+    state !== DEFAULT_STATE_FILTER ||
+    id !== '' ||
+    queues.length > 0 ||
+    minRetries !== '' ||
+    Object.keys(dataObject).length > 0 ||
+    Object.keys(outputObject).length > 0
+
+  const serverFilters: RecentJobsFilterOptions = {
+    state,
+    id: id || null,
+    queues: queues.length > 0 ? queues : null,
+    minRetries: minRetries !== '' ? Number(minRetries) : null,
+    data: Object.keys(dataObject).length > 0 ? dataObject : null,
+    output: Object.keys(outputObject).length > 0 ? outputObject : null,
+  }
+
+  return {
+    state,
+    id,
+    queues,
+    minRetries,
+    data: dataPairs,
+    output: outputPairs,
+    serverFilters,
+    hasActiveFilters,
+  }
+}
+
+export async function loader ({ request, context }: Route.LoaderArgs) {
+  const { DB_URL, SCHEMA } = context.get(dbContext)
+  const url = new URL(request.url)
+  const parsed = parseFiltersFromUrl(url.searchParams)
+  const jobColumns = parseJobColumns(url.searchParams, defaultJobColumnsFor(parsed.state))
+
+  const { page, cursor } = parsePaging(url.searchParams)
+  const limit = 20
+
+  const [recentJobsResult, queueNames] = await Promise.all([
+    getRecentJobs(DB_URL, SCHEMA, {
+      ...parsed.serverFilters,
+      limit,
+      cursor,
+      jobColumns,
+    }).then(
+      (jobs) => ({ jobs, timedOut: false }),
+      (err) => {
+        // A cancelled list query (statement_timeout) is an expected outcome on
+        // large tables with broad filters — render an inline banner instead of
+        // the ErrorBoundary so the user can remove the expensive filter.
+        if (isQueryTimeoutError(err)) return { jobs: null, timedOut: true }
+        throw err
+      }
+    ),
+    getQueueNames(DB_URL, SCHEMA),
+  ])
+
+  const { jobs } = recentJobsResult
+  const recentJobs: JobResult[] = jobs?.rows ?? []
+
+  return {
+    recentJobs,
+    queueNames,
+    page: jobs?.atStart ? 1 : page,
+    timedOut: recentJobsResult.timedOut,
+    queryTimeoutMs: getQueryTimeoutMs(),
+    filters: {
+      state: parsed.state,
+      id: parsed.id,
+      queues: parsed.queues,
+      minRetries: parsed.minRetries,
+      data: parsed.data,
+      output: parsed.output,
+    } satisfies JobsFilters,
+    hasActiveFilters: parsed.hasActiveFilters,
+    hasNextPage: jobs?.hasNextPage ?? false,
+    hasPrevPage: jobs?.hasPrevPage ?? page > 1,
+    nextCursor: jobs?.nextCursor ?? null,
+    prevCursor: jobs?.prevCursor ?? null,
+    jobColumns,
+  }
+}
+
+export function ErrorBoundary ({ error }: Route.ErrorBoundaryProps) {
+  return <ErrorCard title="Failed to load jobs" error={error} />
+}
+
+// Exported for tests: must round-trip through parseFiltersFromUrl.
+export function buildSearchParams (
+  filters: JobsFilters
+): URLSearchParams {
+  const params = new URLSearchParams()
+
+  if (filters.state !== DEFAULT_STATE_FILTER) {
+    params.set('state', filters.state)
+  }
+  if (filters.id) params.set('id', filters.id)
+  if (filters.queues.length > 0) params.set('queues', filters.queues.join(','))
+  if (filters.minRetries) params.set('minRetries', filters.minRetries)
+  for (const pair of filters.data) {
+    if (pair.key && pair.value !== '') params.append(`data.${pair.key}`, pair.value)
+  }
+  for (const pair of filters.output) {
+    if (pair.key && pair.value !== '') params.append(`output.${pair.key}`, pair.value)
+  }
+
+  return params
+}
+
+export function buildViewParams (
+  jobColumns: JobColumn[] = DEFAULT_JOB_COLUMNS,
+  defaultColumns: JobColumn[] = DEFAULT_JOB_COLUMNS
+): URLSearchParams {
+  const params = new URLSearchParams()
+  appendJobColumns(params, jobColumns, defaultColumns)
+  return params
+}
+
+export function buildParams (
+  filters: JobsFilters,
+  jobColumns: JobColumn[] = defaultJobColumnsFor(filters.state)
+): URLSearchParams {
+  const params = buildSearchParams(filters)
+  const viewParams = buildViewParams(jobColumns, defaultJobColumnsFor(filters.state))
+
+  for (const [key, value] of viewParams) {
+    params.append(key, value)
+  }
+
+  return params
+}
+
+export default function Jobs ({ loaderData }: Route.ComponentProps) {
+  const mayAct = useCan('job:send')
+  const {
+    recentJobs,
+    queueNames,
+    page,
+    filters,
+    hasActiveFilters,
+    hasNextPage,
+    hasPrevPage,
+    timedOut,
+    queryTimeoutMs,
+    jobColumns,
+  } = loaderData
+  const sortColumn = jobListSortColumn(filters.state)
+  const [, setSearchParams] = useSearchParams()
+
+  const setQueryParams = (params: URLSearchParams) => {
+    const current = new URLSearchParams(window.location.search)
+    if (current.has('db')) params.set('db', current.get('db')!)
+    setSearchParams(params)
+  }
+
+  const getShareUrl = (columns: JobColumn[]) => {
+    const params = buildParams(filters, columns)
+    const current = new URLSearchParams(window.location.search)
+    if (current.has('db')) params.set('db', current.get('db')!)
+    return `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  }
+
+  // Columns left at their defaults follow the state filter's defaults; chosen ones stay.
+  const defaultColumns = defaultJobColumnsFor(filters.state)
+  const columnsFor = (next: JobsFilters) =>
+    jobColumnsEqual(jobColumns, defaultColumns) ? defaultJobColumnsFor(next.state) : jobColumns
+
+  const handleFiltersChange = (next: JobsFilters) => {
+    setQueryParams(buildParams(next, columnsFor(next)))
+  }
+
+  const handleColumnsChange = (columns: JobColumn[]) => {
+    setQueryParams(buildParams(filters, columns))
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setQueryParams(pagingSearchParams(buildParams(filters, jobColumns), newPage, loaderData))
+  }
+
+  const clearAll = () => {
+    const cleared: JobsFilters = {
+      state: DEFAULT_STATE_FILTER,
+      id: '',
+      queues: [],
+      minRetries: '',
+      data: [],
+      output: [],
+    }
+    setQueryParams(buildParams(cleared, columnsFor(cleared)))
+  }
+
+  const subtitle = `${sortColumn === 'completedOn' ? 'Recently finished' : 'Recently created'} jobs ${filters.queues.length > 0 ? 'in the selected queues' : 'across all queues'}`
+
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        title="Jobs"
+        subtitle={subtitle}
+        action={!mayAct ? undefined : (
+          <Button variant="primary" size="md" render={<DbLink to="/send" />}>Send Job</Button>
+        )}
+      />
+
+      <JobsFilterBar
+        filters={filters}
+        queueOptions={queueNames}
+        onChange={handleFiltersChange}
+      />
+
+      <JobColumnsEditor
+        columns={jobColumns}
+        defaultColumns={defaultColumns}
+        getShareUrl={getShareUrl}
+        onColumnsChange={handleColumnsChange}
+      />
+
+      {hasActiveFilters && (
+        <ActiveFilterChips
+          filters={filters}
+          onChange={handleFiltersChange}
+          onClearAll={clearAll}
+        />
+      )}
+
+      {timedOut && <QueryTimeoutBanner timeoutMs={queryTimeoutMs} />}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {jobColumns.map((col, index) => (
+                  <TableHead key={`${col.path}-${index}`} sortedDesc={col.path === sortColumn}>{col.name}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentJobs.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    className="text-center text-[var(--text-tertiary)] py-8"
+                    colSpan={jobColumns.length}
+                  >
+                    No jobs found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentJobs.map((job: JobResult) => (
+                  <TableRow key={job.id} to={`/queues/${encodeURIComponent(job.name)}/jobs/${job.id}`}>
+                    {jobColumns.map((col, index) => (
+                      <JobColumnCell key={`${col.path}-${index}`} row={job} column={col} />
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+
+        <Pagination
+          page={page}
+          totalPages={null}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          onPageChange={handlePageChange}
+        />
+      </Card>
+    </div>
+  )
+}
+
+interface ActiveFilterChipsProps {
+  filters: JobsFilters
+  onChange: (next: JobsFilters) => void
+  onClearAll: () => void
+}
+
+function ActiveFilterChips ({ filters, onChange, onClearAll }: ActiveFilterChipsProps) {
+  const stateLabel = filters.state === ALL_STATES_FILTER
+    ? 'All States'
+    : filters.state.charAt(0).toUpperCase() + filters.state.slice(1)
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-sm text-gray-500 dark:text-gray-400">Active filters:</span>
+
+      {filters.state !== DEFAULT_STATE_FILTER && (
+        <Chip
+          label={`State: ${stateLabel}`}
+          onRemove={() => onChange({ ...filters, state: DEFAULT_STATE_FILTER })}
+        />
+      )}
+
+      {filters.id && (
+        <Chip
+          label={`ID: ${filters.id}`}
+          onRemove={() => onChange({ ...filters, id: '' })}
+        />
+      )}
+
+      {filters.queues.map((q) => (
+        <Chip
+          key={q}
+          label={`Queue: ${q}`}
+          onRemove={() => onChange({ ...filters, queues: filters.queues.filter(x => x !== q) })}
+        />
+      ))}
+
+      {filters.minRetries && (
+        <Chip
+          label={`Retries ≥ ${filters.minRetries}`}
+          onRemove={() => onChange({ ...filters, minRetries: '' })}
+        />
+      )}
+
+      {filters.data
+        .filter(p => p.key && p.value !== '')
+        .map((p, i) => (
+          <Chip
+            key={`data-${p.key}-${i}`}
+            label={`data.${p.key}=${p.value}`}
+            onRemove={() => onChange({
+              ...filters,
+              data: filters.data.filter((x) => !(x.key === p.key && x.value === p.value)),
+            })}
+          />
+        ))}
+
+      {filters.output
+        .filter(p => p.key && p.value !== '')
+        .map((p, i) => (
+          <Chip
+            key={`output-${p.key}-${i}`}
+            label={`output.${p.key}=${p.value}`}
+            onRemove={() => onChange({
+              ...filters,
+              output: filters.output.filter((x) => !(x.key === p.key && x.value === p.value)),
+            })}
+          />
+        ))}
+
+      <button
+        type="button"
+        onClick={onClearAll}
+        className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 cursor-pointer"
+      >
+        Clear all
+      </button>
+    </div>
+  )
+}
+
+function Chip ({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <Badge variant="primary" size="sm">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove filter ${label}`}
+        className="ml-1 hover:text-primary-700 cursor-pointer"
+      >
+        ×
+      </button>
+    </Badge>
+  )
+}

@@ -1,0 +1,111 @@
+{
+  "name": "@pg-boss/dashboard",
+  "version": "1.12.1",
+  "description": "Web dashboard for monitoring and managing pg-boss job queues",
+  "keywords": [
+    "pg-boss",
+    "job-queue",
+    "background-jobs",
+    "postgresql",
+    "postgres",
+    "dashboard",
+    "monitoring",
+    "admin",
+    "task-queue",
+    "queue"
+  ],
+  "type": "module",
+  "bin": {
+    "pg-boss-dashboard": "bin/cli.js"
+  },
+  "exports": {
+    "./handler": {
+      "types": "./types/handler.d.ts",
+      "default": "./build/handler.js"
+    },
+    "./build/*": "./build/*",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "handler": [
+        "types/handler.d.ts"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "files": [
+    "build",
+    "bin",
+    "types"
+  ],
+  "scripts": {
+    "dev": "cross-env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/pgboss PGBOSS_SCHEMA=pgboss_dev node server.js",
+    "dev:auth": "cross-env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/pgboss PGBOSS_SCHEMA=pgboss_dev PGBOSS_DASHBOARD_AUTH_USERNAME=admin PGBOSS_DASHBOARD_AUTH_PASSWORD=admin node server.js",
+    "dev:init-db": "cross-env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/pgboss PGBOSS_SCHEMA=pgboss_dev tsx scripts/init-dev-db.ts",
+    "dev:worker": "cross-env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/pgboss PGBOSS_SCHEMA=pgboss_dev tsx scripts/worker.ts",
+    "build": "react-router build && tsx scripts/build-server.ts && tsx scripts/check-build-portable.ts && node scripts/check-imports.mjs && tsx scripts/notices.ts",
+    "start": "node ./build/server.js",
+    "prepublishOnly": "npm run typecheck && npm run test",
+    "prepack": "npm run build",
+    "test": "vitest run --config vitest.config.frontend.ts && vitest run --config vitest.config.server.ts",
+    "test:frontend": "vitest run --config vitest.config.frontend.ts",
+    "test:server": "vitest run --config vitest.config.server.ts",
+    "cover": "vitest run --coverage --config vitest.config.frontend.ts && vitest run --coverage --config vitest.config.server.ts",
+    "cover:frontend": "vitest run --coverage --config vitest.config.frontend.ts",
+    "cover:server": "vitest run --coverage --config vitest.config.server.ts",
+    "typegen": "react-router typegen",
+    "typecheck": "react-router typegen && tsc --noEmit",
+    "ci": "npm run typecheck && npm run cover:frontend && cross-env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/pgboss npm run cover:server"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@react-router/node": "^8.3.1",
+    "hono": "^4.13.13",
+    "isbot": "^5.2.2",
+    "pg": "^8.23.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@react-router/dev": "^8.4.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^4.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "lucide-react": "^1.57.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.1.18",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "uplot": "^1.6.32",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timgit/pg-boss.git"
+  },
+  "author": "timgit",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/timgit/pg-boss/issues"
+  },
+  "homepage": "https://pgboss.io"
+}

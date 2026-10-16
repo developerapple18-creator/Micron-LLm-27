@@ -1,0 +1,31 @@
+{
+  "include": [
+    "app/**/*",
+    ".react-router/types/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["node", "vite/client"],
+    "target": "ES2022",
+    "module": "ESNext",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "rootDirs": [".", ".react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"],
+      "~pro": ["./app/lib/pro-stub.ts"],
+      "~pro-server": ["./app/lib/pro-server-stub.ts"],
+      "pg-boss": ["../../src"]
+    }
+  }
+}

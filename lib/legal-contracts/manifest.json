@@ -1,0 +1,14 @@
+{
+  "project": "Micron Law V3",
+  "source": "approved design discussion and design artifacts",
+  "status": "approved design only; not production tested",
+  "logical_documents": 4,
+  "files": {
+    "01-shared-legal-core-v0.2.md": "95f747583621bfab3cb269c03cdc864e369fb6e9795163032f35d9229556cc17",
+    "02-case-analysis-journey-v1.0.md": "182bac727a7563308c833fcac5a7df4595b08ea00bf43ed66740b19ff8c9b0a6",
+    "03-case-analysis-prompt-v0.1.md": "44d711a36c14dcfcd92afe5b5a2a73656fec8f65410c487bfdad9940c3b85888",
+    "04-clarification-and-report-contract-v0.1.md": "f2ae31051101f58906b2cec9df87465134553c30e8a1a6469a11aaf83e25d177",
+    "05-case-analysis-json-schema-v0.1.json": "73ae7b0acf53551dabfe48f5c1fb0fe4a28258538c21ac3b1d06f4e80e038a19"
+  },
+  "notes": "01 and 02 transcribed from previously approved in-chat writing. 03-05 copied unmodified from previously generated draft artifacts. Ensure no modifications prior to approval."
+}
